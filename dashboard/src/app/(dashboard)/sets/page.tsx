@@ -64,7 +64,7 @@ export default async function SetsPage() {
       <div>
         <h1 className="text-2xl font-bold">Sets</h1>
         <p className="text-sm text-muted-foreground">
-          {items.length} Pokemon TCG sets tracked (2018-present)
+          {items.length} Pokemon TCG sets tracked (2014-present)
         </p>
       </div>
 
