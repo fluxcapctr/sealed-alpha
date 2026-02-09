@@ -37,7 +37,7 @@ function LoginForm() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <div className="flex min-h-[100dvh] items-center justify-center px-5 py-12 sm:px-6">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <Link href="/">
@@ -76,7 +76,7 @@ function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+              className="h-11 w-full rounded-md border border-border bg-background px-3 text-base outline-none focus:border-primary sm:h-auto sm:py-2 sm:text-sm"
               placeholder="you@example.com"
             />
           </div>
@@ -94,14 +94,14 @@ function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+              className="h-11 w-full rounded-md border border-border bg-background px-3 text-base outline-none focus:border-primary sm:h-auto sm:py-2 sm:text-sm"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+            className="h-11 w-full rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 sm:h-auto sm:py-2"
           >
             {loading ? "Signing in..." : "Sign In"}
           </button>

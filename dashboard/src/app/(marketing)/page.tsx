@@ -17,44 +17,44 @@ export default async function LandingPage() {
     .select("*", { count: "exact", head: true });
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-4">
-      <div className="mx-auto max-w-2xl text-center">
+    <div className="flex min-h-[100dvh] flex-col items-center justify-center px-5 py-12 sm:px-6 sm:py-16">
+      <div className="mx-auto w-full max-w-2xl text-center">
         <Image
           src="/logo-sealed-alpha.png"
           alt="Sealed Alpha"
           width={120}
           height={154}
-          className="mx-auto mb-8 rotate-[20deg]"
+          className="mx-auto mb-6 w-[80px] rotate-[20deg] sm:mb-8 sm:w-[120px]"
           priority
         />
 
-        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
           Pokemon TCG Sealed Product
           <br />
           <span className="text-primary">Investment Tracker</span>
         </h1>
 
-        <p className="mt-4 text-lg text-muted-foreground">
+        <p className="mt-3 text-base text-muted-foreground sm:mt-4 sm:text-lg">
           Track {productCount ?? 800} sealed products across {setCount ?? 80}{" "}
           modern sets. Real-time pricing, buy/sell signals, rip scores, supply
           depletion, and lifecycle analytics.
         </p>
 
-        <div className="mt-8 flex items-center justify-center gap-4">
-          <Link href="/signup">
-            <HoverGlowButton variant="primary">
+        <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:mt-8 sm:flex-row sm:gap-4">
+          <Link href="/signup" className="w-full sm:w-auto">
+            <HoverGlowButton variant="primary" className="w-full sm:w-auto">
               Get Free Access
             </HoverGlowButton>
           </Link>
-          <Link href="/login">
-            <HoverGlowButton variant="outline">
+          <Link href="/login" className="w-full sm:w-auto">
+            <HoverGlowButton variant="outline" className="w-full sm:w-auto">
               Sign In
             </HoverGlowButton>
           </Link>
         </div>
 
         {/* Feature grid */}
-        <div className="mt-16 grid grid-cols-1 gap-4 sm:grid-cols-3 text-left">
+        <div className="mt-10 grid grid-cols-2 gap-3 text-left sm:mt-16 sm:grid-cols-3 sm:gap-4">
           {[
             {
               title: "Buy/Sell Signals",
@@ -83,17 +83,19 @@ export default async function LandingPage() {
           ].map((feature) => (
             <div
               key={feature.title}
-              className="rounded-lg border border-border/50 bg-card/50 p-4"
+              className="rounded-lg border border-border/50 bg-card/50 p-3 sm:p-4"
             >
-              <h3 className="text-sm font-semibold">{feature.title}</h3>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <h3 className="text-xs font-semibold sm:text-sm">
+                {feature.title}
+              </h3>
+              <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground sm:text-xs">
                 {feature.desc}
               </p>
             </div>
           ))}
         </div>
 
-        <p className="mt-12 text-xs text-muted-foreground">
+        <p className="mt-8 text-xs text-muted-foreground sm:mt-12">
           <Link href="/privacy" className="hover:underline">
             Privacy Policy
           </Link>
