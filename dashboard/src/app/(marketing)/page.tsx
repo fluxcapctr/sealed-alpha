@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { HoverGlowButton } from "@/components/hover-glow-button";
 
 export default async function LandingPage() {
   const supabase = await createClient();
@@ -35,22 +36,20 @@ export default async function LandingPage() {
 
         <p className="mt-4 text-lg text-muted-foreground">
           Track {productCount ?? 800}+ sealed products across {setCount ?? 80}+
-          sets. Real-time pricing, buy/sell signals, rip scores, supply
+          modern sets. Real-time pricing, buy/sell signals, rip scores, supply
           depletion, and lifecycle analytics.
         </p>
 
         <div className="mt-8 flex items-center justify-center gap-4">
-          <Link
-            href="/signup"
-            className="rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Get Free Access
+          <Link href="/signup">
+            <HoverGlowButton variant="primary">
+              Get Free Access
+            </HoverGlowButton>
           </Link>
-          <Link
-            href="/login"
-            className="rounded-lg border border-border px-6 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-accent"
-          >
-            Sign In
+          <Link href="/login">
+            <HoverGlowButton variant="outline">
+              Sign In
+            </HoverGlowButton>
           </Link>
         </div>
 
@@ -78,7 +77,7 @@ export default async function LandingPage() {
               desc: "Compare price trajectories across products and eras",
             },
             {
-              title: "80+ Sets",
+              title: "80+ Modern Sets",
               desc: "XY through Scarlet & Violet — every sealed product tracked",
             },
           ].map((feature) => (
