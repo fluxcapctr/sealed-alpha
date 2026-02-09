@@ -35,7 +35,7 @@ export default async function LandingPage() {
         </h1>
 
         <p className="mt-4 text-lg text-muted-foreground">
-          Track {productCount ?? 800}+ sealed products across {setCount ?? 80}+
+          Track {productCount ?? 800} sealed products across {setCount ?? 80}{" "}
           modern sets. Real-time pricing, buy/sell signals, rip scores, supply
           depletion, and lifecycle analytics.
         </p>
@@ -77,7 +77,7 @@ export default async function LandingPage() {
               desc: "Compare price trajectories across products and eras",
             },
             {
-              title: "80+ Modern Sets",
+              title: `${setCount ?? 80} Modern Sets`,
               desc: "XY through Scarlet & Violet — every sealed product tracked",
             },
           ].map((feature) => (
