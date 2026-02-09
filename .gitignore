@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+.env.local
+
+# Temp
+.tmp/
+
+# Node
+node_modules/
+.next/
+out/
+
+# Credentials
+credentials.json
+token.json
+serviceAccountKey.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
