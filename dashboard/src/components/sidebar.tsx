@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Package,
   Layers,
-  TrendingUp,
   BarChart3,
   Bell,
 } from "lucide-react";
@@ -18,7 +17,6 @@ const NAV_ITEMS = [
   { href: "/overview", label: "Overview", icon: LayoutDashboard },
   { href: "/products", label: "Products", icon: Package },
   { href: "/sets", label: "Sets", icon: Layers },
-  { href: "/signals", label: "Signals", icon: TrendingUp },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/alerts", label: "Alerts", icon: Bell },
 ];

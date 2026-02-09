@@ -19,7 +19,10 @@ import type { ProductAnalytics, Set } from "@/types/database";
 
 export const revalidate = 300;
 
-type SortField = "set_name" | "product_type" | "current_price" | "release_date";
+type SortField = "set_name" | "product_type" | "current_price" | "release_date" | "price_change_7d_pct" | "price_change_30d_pct" | "current_quantity" | "signal_score";
+
+// Fields that default to descending on first click
+const DESC_DEFAULT: SortField[] = ["current_price", "release_date", "price_change_7d_pct", "price_change_30d_pct", "current_quantity", "signal_score"];
 
 function buildSortUrl(
   params: Record<string, string | undefined>,
@@ -32,7 +35,7 @@ function buildSortUrl(
       ? currentDir === "asc"
         ? "desc"
         : "asc"
-      : field === "current_price" || field === "release_date"
+      : DESC_DEFAULT.includes(field)
         ? "desc"
         : "asc";
 
@@ -45,13 +48,39 @@ function buildSortUrl(
   return `/products?${sp.toString()}`;
 }
 
-function sortArrow(
-  params: Record<string, string | undefined>,
-  field: SortField
-) {
+function SortHeader({
+  params,
+  field,
+  label,
+  align = "left",
+}: {
+  params: Record<string, string | undefined>;
+  field: SortField;
+  label: string;
+  align?: "left" | "right";
+}) {
   const currentSort = params.sort ?? "release_date";
-  if (currentSort !== field) return "";
-  return (params.dir ?? "desc") === "asc" ? " \u2191" : " \u2193";
+  const isActive = currentSort === field;
+  const arrow = isActive
+    ? (params.dir ?? "desc") === "asc"
+      ? " \u2191"
+      : " \u2193"
+    : "";
+
+  return (
+    <TableHead className={align === "right" ? "text-right" : ""}>
+      <Link
+        href={buildSortUrl(params, field)}
+        className={`inline-flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors ${
+          isActive
+            ? "text-foreground underline underline-offset-4 decoration-primary/50"
+            : "text-muted-foreground"
+        }`}
+      >
+        {label}{arrow}
+      </Link>
+    </TableHead>
+  );
 }
 
 export default async function ProductsPage({
@@ -122,7 +151,7 @@ export default async function ProductsPage({
   }
 
   // Default sort: release_date desc (newest first)
-  const validSortFields = ["set_name", "product_type", "current_price", "release_date"] as const;
+  const validSortFields = ["set_name", "product_type", "current_price", "release_date", "price_change_7d_pct", "price_change_30d_pct", "current_quantity", "signal_score"] as const;
   const sortField = validSortFields.includes(params.sort as SortField)
     ? (params.sort as SortField)
     : "release_date";
@@ -274,34 +303,13 @@ export default async function ProductsPage({
             <TableHeader>
               <TableRow>
                 <TableHead>Product</TableHead>
-                <TableHead>
-                  <Link
-                    href={buildSortUrl(params, "set_name")}
-                    className="hover:text-foreground"
-                  >
-                    Set{sortArrow(params, "set_name")}
-                  </Link>
-                </TableHead>
-                <TableHead>
-                  <Link
-                    href={buildSortUrl(params, "product_type")}
-                    className="hover:text-foreground"
-                  >
-                    Type{sortArrow(params, "product_type")}
-                  </Link>
-                </TableHead>
-                <TableHead className="text-right">
-                  <Link
-                    href={buildSortUrl(params, "current_price")}
-                    className="hover:text-foreground"
-                  >
-                    Price{sortArrow(params, "current_price")}
-                  </Link>
-                </TableHead>
-                <TableHead className="text-right">7d</TableHead>
-                <TableHead className="text-right">30d</TableHead>
-                <TableHead className="text-right">Qty</TableHead>
-                <TableHead className="text-right">Signal</TableHead>
+                <SortHeader params={params} field="set_name" label="Set" />
+                <SortHeader params={params} field="product_type" label="Type" />
+                <SortHeader params={params} field="current_price" label="Price" align="right" />
+                <SortHeader params={params} field="price_change_7d_pct" label="7d" align="right" />
+                <SortHeader params={params} field="price_change_30d_pct" label="30d" align="right" />
+                <SortHeader params={params} field="current_quantity" label="Qty" align="right" />
+                <SortHeader params={params} field="signal_score" label="Signal" align="right" />
               </TableRow>
             </TableHeader>
             <TableBody>
