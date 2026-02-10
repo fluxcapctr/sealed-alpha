@@ -86,7 +86,7 @@ export default async function SetsPage({
                     <img
                       src={set.top_card_image_url}
                       alt=""
-                      className="absolute inset-0 w-full h-full object-cover object-[center_20%] blur-[1px] scale-105 opacity-40 transition-all duration-500 ease-out group-hover:opacity-55 group-hover:scale-110"
+                      className="absolute -inset-3 w-[calc(100%+24px)] h-[calc(100%+24px)] object-cover object-[center_20%] blur-[1px] opacity-40 transition-all duration-500 ease-out group-hover:opacity-55 group-hover:scale-[1.03]"
                     />
                   ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-muted/50 to-muted/20" />
