@@ -373,6 +373,50 @@ export type Database = {
           },
         ];
       };
+      set_scores: {
+        Row: {
+          id: string;
+          set_id: string;
+          overall_grade: string;
+          chase_card_score: number;
+          art_quality_score: number;
+          nostalgia_score: number;
+          fun_factor_score: number;
+          scarcity_score: number;
+          set_depth_score: number;
+          chase_card_name: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          set_id: string;
+          overall_grade: string;
+          chase_card_score: number;
+          art_quality_score: number;
+          nostalgia_score: number;
+          fun_factor_score: number;
+          scarcity_score: number;
+          set_depth_score: number;
+          chase_card_name?: string | null;
+          notes?: string | null;
+        };
+        Update: {
+          id?: string;
+          set_id?: string;
+          overall_grade?: string;
+          chase_card_score?: number;
+          art_quality_score?: number;
+          nostalgia_score?: number;
+          fun_factor_score?: number;
+          scarcity_score?: number;
+          set_depth_score?: number;
+          chase_card_name?: string | null;
+          notes?: string | null;
+        };
+        Relationships: [];
+      };
       user_settings: {
         Row: {
           id: string;
@@ -478,5 +522,6 @@ export type Alert = Database["public"]["Tables"]["alerts"]["Row"];
 export type PullRate = Database["public"]["Tables"]["pull_rates"]["Row"];
 export type SetRarityValue =
   Database["public"]["Tables"]["set_rarity_values"]["Row"];
+export type SetScore = Database["public"]["Tables"]["set_scores"]["Row"];
 export type ProductAnalytics =
   Database["public"]["Views"]["product_analytics"]["Row"];

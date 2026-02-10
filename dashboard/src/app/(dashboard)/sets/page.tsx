@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { ProductAnalytics } from "@/types/database";
 import { LanguageToggle } from "@/components/language-toggle";
+import { GradeBadge } from "@/components/set-score-card";
 
 export const revalidate = 300;
 
@@ -25,11 +26,21 @@ export default async function SetsPage({
     .eq("language", lang)
     .order("release_date", { ascending: false });
 
-  // Get product counts per set from analytics
-  const { data: analytics } = await supabase
-    .from("product_analytics")
-    .select("*")
-    .returns<ProductAnalytics[]>();
+  // Get product counts per set from analytics + set scores
+  const [{ data: analytics }, { data: scoresData }] = await Promise.all([
+    supabase
+      .from("product_analytics")
+      .select("*")
+      .returns<ProductAnalytics[]>(),
+    supabase.from("set_scores").select("set_id, overall_grade"),
+  ]);
+
+  const gradeMap = new Map<string, string>();
+  if (scoresData) {
+    for (const s of scoresData) {
+      gradeMap.set(s.set_id, s.overall_grade);
+    }
+  }
 
   const setStats = new Map<
     string,
@@ -117,14 +128,19 @@ export default async function SetsPage({
                           {set.name}
                         </h3>
                       )}
-                      {set.code && (
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] uppercase border-white/20 text-white/70 ml-2 flex-shrink-0"
-                        >
-                          {set.code}
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-1.5 ml-2 flex-shrink-0">
+                        {gradeMap.has(set.id) && (
+                          <GradeBadge grade={gradeMap.get(set.id)!} />
+                        )}
+                        {set.code && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] uppercase border-white/20 text-white/70"
+                          >
+                            {set.code}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
 
                     {/* Bottom section */}

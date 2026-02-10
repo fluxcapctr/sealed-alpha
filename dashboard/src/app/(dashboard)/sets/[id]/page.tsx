@@ -16,7 +16,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { InfoTip } from "@/components/info-tip";
-import type { ProductAnalytics, SetRarityValue, PullRate } from "@/types/database";
+import { SetScoreCard } from "@/components/set-score-card";
+import type { ProductAnalytics, SetRarityValue, PullRate, SetScore } from "@/types/database";
 
 export const revalidate = 300;
 
@@ -150,6 +151,7 @@ export default async function SetDetailPage({
     { data: productsData },
     { data: rarityData },
     { data: pullRatesData },
+    { data: scoreData },
   ] = await Promise.all([
     supabase.from("sets").select("*").eq("id", id).limit(1),
     supabase
@@ -170,6 +172,12 @@ export default async function SetDetailPage({
       .eq("set_id", id)
       .order("packs_per_hit", { ascending: true })
       .returns<PullRate[]>(),
+    supabase
+      .from("set_scores")
+      .select("*")
+      .eq("set_id", id)
+      .limit(1)
+      .returns<SetScore[]>(),
   ]);
 
   const set = setData?.[0];
@@ -178,6 +186,7 @@ export default async function SetDetailPage({
   const products = productsData ?? [];
   const rarityValues = rarityData ?? [];
   const pullRates = pullRatesData ?? [];
+  const setScore = scoreData?.[0] ?? null;
 
   // Find standard booster box and ETB prices
   const setNameLower = set.name.toLowerCase();
@@ -325,8 +334,8 @@ export default async function SetDetailPage({
         </div>
       </div>
 
-      {/* Rip Score + Rarity Breakdown side by side */}
-      {(primaryEv || pullRates.length > 0 || rarityValues.length > 0) && (
+      {/* Rip Score + Investibility Score side by side */}
+      {(primaryEv || setScore) && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {/* Rip Score */}
           {primaryEv ? (
@@ -443,7 +452,7 @@ export default async function SetDetailPage({
                 )}
               </CardContent>
             </Card>
-          ) : (
+          ) : !setScore ? null : (
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm">EV / Rip Score</CardTitle>
@@ -460,6 +469,14 @@ export default async function SetDetailPage({
             </Card>
           )}
 
+          {/* Set Investibility Score */}
+          {setScore && <SetScoreCard score={setScore} />}
+        </div>
+      )}
+
+      {/* Rarity Breakdown + Pull Rates side by side */}
+      {(rarityValues.length > 0 || pullRates.length > 0) && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {/* Rarity Breakdown */}
           {rarityValues.length > 0 && (
             <Card>
@@ -508,48 +525,48 @@ export default async function SetDetailPage({
               </CardContent>
             </Card>
           )}
-        </div>
-      )}
 
-      {/* Pull Rates */}
-      {pullRates.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">
-              <InfoTip label="Pull Rates" side="right">
-                How many packs you need to open on average to pull one card of each rarity. Lower = more common. Based on community-sourced data from TCGPlayer and YouTube case break samples.
-              </InfoTip>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Rarity</TableHead>
-                  <TableHead className="text-right">Packs per Hit</TableHead>
-                  <TableHead className="text-right">Cards in Set</TableHead>
-                  <TableHead className="text-right">Source</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pullRates.map((pr) => (
-                  <TableRow key={pr.id}>
-                    <TableCell className="text-sm">{pr.rarity}</TableCell>
-                    <TableCell className="text-right font-mono text-sm">
-                      {pr.packs_per_hit.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-sm">
-                      {pr.cards_in_set ?? "--"}
-                    </TableCell>
-                    <TableCell className="text-right text-xs text-muted-foreground">
-                      {pr.source}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+          {/* Pull Rates */}
+          {pullRates.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">
+                  <InfoTip label="Pull Rates" side="right">
+                    How many packs you need to open on average to pull one card of each rarity. Lower = more common. Based on community-sourced data from TCGPlayer and YouTube case break samples.
+                  </InfoTip>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Rarity</TableHead>
+                      <TableHead className="text-right">Packs per Hit</TableHead>
+                      <TableHead className="text-right">Cards in Set</TableHead>
+                      <TableHead className="text-right">Source</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pullRates.map((pr) => (
+                      <TableRow key={pr.id}>
+                        <TableCell className="text-sm">{pr.rarity}</TableCell>
+                        <TableCell className="text-right font-mono text-sm">
+                          {pr.packs_per_hit.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm">
+                          {pr.cards_in_set ?? "--"}
+                        </TableCell>
+                        <TableCell className="text-right text-xs text-muted-foreground">
+                          {pr.source}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
 
       {/* Products Table */}
