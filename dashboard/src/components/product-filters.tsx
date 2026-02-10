@@ -42,6 +42,7 @@ export function ProductFilters({
   const currentType = searchParams.get("type") ?? "all";
   const currentSet = searchParams.get("set") ?? "all";
   const currentSeries = searchParams.get("series") ?? "all";
+  const currentLang = searchParams.get("lang") ?? "all";
   const currentSort = searchParams.get("sort") ?? "release_date";
   const currentDir = searchParams.get("dir") ?? "desc";
   const sortValue = `${currentSort}:${currentDir}`;
@@ -62,12 +63,23 @@ export function ProductFilters({
   }, [router]);
 
   const hasFilters =
-    currentType !== "all" || currentSet !== "all" || currentSeries !== "all";
+    currentType !== "all" || currentSet !== "all" || currentSeries !== "all" || currentLang !== "all";
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
+      <Select value={currentLang} onValueChange={(v) => updateParam("lang", v)}>
+        <SelectTrigger className="w-full md:w-[140px] h-8 text-xs">
+          <SelectValue placeholder="All Languages" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Languages</SelectItem>
+          <SelectItem value="en">English</SelectItem>
+          <SelectItem value="ja">Japanese</SelectItem>
+        </SelectContent>
+      </Select>
+
       <Select value={currentType} onValueChange={(v) => updateParam("type", v)}>
-        <SelectTrigger className="w-[170px] h-8 text-xs">
+        <SelectTrigger className="w-full md:w-[170px] h-8 text-xs">
           <SelectValue placeholder="All Types" />
         </SelectTrigger>
         <SelectContent>
@@ -95,7 +107,7 @@ export function ProductFilters({
           router.push(`/products?${params.toString()}`);
         }}
       >
-        <SelectTrigger className="w-[180px] h-8 text-xs">
+        <SelectTrigger className="w-full md:w-[180px] h-8 text-xs">
           <SelectValue placeholder="All Eras" />
         </SelectTrigger>
         <SelectContent>
@@ -109,7 +121,7 @@ export function ProductFilters({
       </Select>
 
       <Select value={currentSet} onValueChange={(v) => updateParam("set", v)}>
-        <SelectTrigger className="w-[200px] h-8 text-xs">
+        <SelectTrigger className="w-full md:w-[200px] h-8 text-xs">
           <SelectValue placeholder="All Sets" />
         </SelectTrigger>
         <SelectContent className="max-h-[300px]">
@@ -123,7 +135,7 @@ export function ProductFilters({
       </Select>
 
       <Select value={sortValue} onValueChange={handleSortChange}>
-        <SelectTrigger className="w-[180px] h-8 text-xs">
+        <SelectTrigger className="w-full md:w-[180px] h-8 text-xs">
           <SelectValue placeholder="Sort by..." />
         </SelectTrigger>
         <SelectContent>
@@ -140,7 +152,7 @@ export function ProductFilters({
       {hasFilters && (
         <button
           onClick={clearAll}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors w-full md:w-auto text-center md:text-left"
         >
           Clear filters
         </button>

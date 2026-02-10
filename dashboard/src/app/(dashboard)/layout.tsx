@@ -1,4 +1,4 @@
-import { Sidebar } from "@/components/sidebar";
+import { Sidebar, MobileSidebar } from "@/components/sidebar";
 import { StarsBackground } from "@/components/ui/stars-background";
 
 export default function DashboardLayout({
@@ -9,7 +9,8 @@ export default function DashboardLayout({
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
-      <main className="relative flex-1 overflow-auto p-6">
+      <MobileSidebar />
+      <main className="relative flex-1 overflow-y-auto overflow-x-hidden p-4 pt-18 md:p-6 md:pt-6">
         <StarsBackground
           starDensity={0.0002}
           twinkleProbability={0.8}

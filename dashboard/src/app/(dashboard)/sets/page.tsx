@@ -2,19 +2,31 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatPrice } from "@/lib/signals";
+import { HIDDEN_SUBSETS } from "@/lib/constants";
 import Link from "next/link";
 import Image from "next/image";
 import type { ProductAnalytics } from "@/types/database";
 
 export const revalidate = 300;
 
-export default async function SetsPage() {
+export default async function SetsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ lang?: string }>;
+}) {
+  const params = await searchParams;
   const supabase = await createClient();
 
-  const { data: sets } = await supabase
+  let setsQuery = supabase
     .from("sets")
     .select("*")
     .order("release_date", { ascending: false });
+
+  if (params.lang) {
+    setsQuery = setsQuery.eq("language", params.lang);
+  }
+
+  const { data: sets } = await setsQuery;
 
   // Get product counts per set from analytics
   const { data: analytics } = await supabase
@@ -45,27 +57,50 @@ export default async function SetsPage() {
     }
   }
 
-  // Sub-sets whose cards are already included in the parent set
-  const HIDDEN_SUBSETS = new Set([
-    "Silver Tempest Trainer Gallery",
-    "Lost Origin Trainer Gallery",
-    "Astral Radiance Trainer Gallery",
-    "Brilliant Stars Trainer Gallery",
-    "Hidden Fates Shiny Vault",
-    "Shining Fates Shiny Vault",
-    "Crown Zenith Galarian Gallery",
-    "Scarlet & Violet Energies",
-  ]);
-
   const items = (sets ?? []).filter((s) => !HIDDEN_SUBSETS.has(s.name));
+  const currentLang = params.lang ?? "";
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Sets</h1>
-        <p className="text-sm text-muted-foreground">
-          {items.length} Pokemon TCG sets tracked (2014-present)
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Sets</h1>
+          <p className="text-sm text-muted-foreground">
+            {items.length} Pokemon TCG sets tracked
+          </p>
+        </div>
+        <div className="flex gap-1">
+          <Link
+            href="/sets"
+            className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+              !currentLang
+                ? "bg-primary text-primary-foreground border-primary"
+                : "border-border text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            All
+          </Link>
+          <Link
+            href="/sets?lang=en"
+            className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+              currentLang === "en"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "border-border text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            English
+          </Link>
+          <Link
+            href="/sets?lang=ja"
+            className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+              currentLang === "ja"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "border-border text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Japanese
+          </Link>
+        </div>
       </div>
 
       {items.length === 0 ? (
@@ -115,14 +150,24 @@ export default async function SetsPage() {
                           {set.name}
                         </h3>
                       )}
-                      {set.code && (
-                        <Badge
-                          variant="outline"
-                          className="ml-2 text-[10px] uppercase flex-shrink-0 border-white/20 text-white/70"
-                        >
-                          {set.code}
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                        {set.language === "ja" && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] uppercase border-red-400/30 text-red-300/80"
+                          >
+                            JP
+                          </Badge>
+                        )}
+                        {set.code && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] uppercase border-white/20 text-white/70"
+                          >
+                            {set.code}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
 
                     {/* Bottom section */}

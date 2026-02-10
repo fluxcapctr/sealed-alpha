@@ -61,13 +61,22 @@ class Config:
     tcgplayer_product_api: str = "https://mpapi.tcgplayer.com/v2/product"
     tcgplayer_category_id: int = 3  # Pokemon = category 3 on TCGPlayer
 
-    # Product types to track
+    # Product types to track (English)
     product_types: list[str] = field(default_factory=lambda: [
         "Booster Box",
         "Elite Trainer Box",
         "Pokemon Center Elite Trainer Box",
         "Booster Pack",
         "Collection Box",
+    ])
+
+    # Product types to track (Japanese) — broader since JP has fewer standardized types
+    product_types_jp: list[str] = field(default_factory=lambda: [
+        "Booster Box",
+        "Booster Pack",
+        "Collection Box",
+        "Elite Trainer Box",
+        "Other",
     ])
 
     # Set year range (XY era = 2014, SM = 2017, SWSH = 2020, SV = 2023)

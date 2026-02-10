@@ -24,19 +24,21 @@ class Database:
     # ------------------------------------------------------------------
 
     def upsert_set(self, s: PokemonSet) -> dict:
-        """Insert or update a set. Uses code (unique) for conflict resolution."""
+        """Insert or update a set. Uses (code, language) for conflict resolution."""
         data = s.to_dict()
         result = (
             self.client.table("sets")
-            .upsert(data, on_conflict="code")
+            .upsert(data, on_conflict="code,language")
             .execute()
         )
         return result.data[0] if result.data else {}
 
-    def get_sets(self, in_print: bool | None = None) -> list[dict]:
+    def get_sets(self, in_print: bool | None = None, language: str | None = None) -> list[dict]:
         query = self.client.table("sets").select("*").order("release_date", desc=True)
         if in_print is not None:
             query = query.eq("is_in_print", in_print)
+        if language is not None:
+            query = query.eq("language", language)
         return query.execute().data
 
     def get_set_by_group_id(self, group_id: int) -> dict | None:
@@ -78,6 +80,7 @@ class Database:
         set_id: str | None = None,
         product_type: str | None = None,
         is_active: bool = True,
+        language: str | None = None,
     ) -> list[dict]:
         query = (
             self.client.table("products")
@@ -89,6 +92,8 @@ class Database:
             query = query.eq("set_id", set_id)
         if product_type:
             query = query.eq("product_type", product_type)
+        if language is not None:
+            query = query.eq("language", language)
         return query.execute().data
 
     def get_product_by_tcgplayer_id(self, tcgplayer_id: int) -> dict | None:

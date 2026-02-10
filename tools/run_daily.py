@@ -26,11 +26,14 @@ logger = logging.getLogger("daily_pipeline")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 
-async def run_price_scraper(config: Config, db: Database) -> dict:
+async def run_price_scraper(config: Config, db: Database, language: str | None = None) -> dict:
     """Run the price scraper for all products due for scraping."""
     from tools.scrape_prices import scrape_product_price_api
 
     products = db.get_products_needing_scrape()
+    # Filter by language if specified
+    if language and language != "all":
+        products = [p for p in products if p.get("language", "en") == language]
     logger.info(f"[PRICES] {len(products)} products due for scraping")
 
     results = {"success": 0, "failed": 0, "skipped": 0}
@@ -99,6 +102,7 @@ async def main():
     parser.add_argument("--prices-only", action="store_true")
     parser.add_argument("--signals-only", action="store_true")
     parser.add_argument("--skip-onboard", action="store_true", help="Skip new set detection")
+    parser.add_argument("--language", default=None, help="Filter by language (en, ja, or all). Default: all products")
     args = parser.parse_args()
 
     config = Config()
@@ -128,7 +132,7 @@ async def main():
     # Step 1: Scrape prices
     if not args.signals_only:
         logger.info("\n--- Step 1: Scrape Prices ---")
-        pipeline_results["prices"] = await run_price_scraper(config, db)
+        pipeline_results["prices"] = await run_price_scraper(config, db, args.language)
 
     # Step 2: Refresh analytics (needs fresh price data)
     logger.info("\n--- Step 2: Refresh Analytics ---")

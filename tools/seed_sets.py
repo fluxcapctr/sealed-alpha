@@ -1,11 +1,12 @@
 """
 Seed Pokemon TCG sets into Supabase.
 
-Uses the Pokemon TCG API (api.pokemontcg.io) for set metadata.
-By default seeds from XY era (2014) onward, skipping promos and sub-sets.
+Uses the Pokemon TCG API (api.pokemontcg.io) for English set metadata.
+For Japanese, discovers sets from TCGPlayer search API.
 
 Usage:
     python tools/seed_sets.py
+    python tools/seed_sets.py --language ja
     python tools/seed_sets.py --year-from 2014
     python tools/seed_sets.py --dry-run
 """
@@ -197,13 +198,170 @@ def api_set_to_model(api_set: dict) -> PokemonSet:
     )
 
 
+## --- Japanese set support ---
+
+
+def infer_jp_series(set_name: str) -> str:
+    """Infer the series/era from a Japanese set name based on its code prefix."""
+    name = set_name.strip()
+
+    # JP set names typically start with a code like "SV10:", "SM12:", "S11:", "XY5-Bg:", "M2:", "m1S:"
+    # Match by the leading code prefix
+    name_upper = name.upper()
+    if name_upper.startswith(("SV", "M1", "M2", "M3")):
+        return "Scarlet & Violet"
+    if name_upper.startswith(("S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9",
+                               "S10", "S11", "S12", "SI ", "SI:", "SVN", "SVM")):
+        return "Sword & Shield"
+    if name_upper.startswith("SM") or name_upper.startswith("SMP"):
+        return "Sun & Moon"
+    if name_upper.startswith(("XY", "CP6")):
+        return "XY"
+
+    # Fallback: check for keywords in the name
+    name_lower = name.lower()
+    if "sword" in name_lower or "shield" in name_lower:
+        return "Sword & Shield"
+    if "sun" in name_lower or "moon" in name_lower:
+        return "Sun & Moon"
+
+    return ""
+
+
+async def discover_japanese_sets(config: Config) -> list[dict]:
+    """
+    Search TCGPlayer for all Japanese Pokemon sealed products
+    and extract unique set groupings.
+    """
+    search_payload = {
+        "algorithm": "sales_synonym_v2",
+        "from": 0,
+        "size": 50,
+        "filters": {
+            "term": {
+                "productLineName": ["pokemon-japan"],
+                "productTypeName": ["Sealed Products"],
+            },
+            "range": {},
+            "match": {},
+        },
+        "listingSearch": {
+            "filters": {
+                "term": {},
+                "range": {},
+                "exclude": {"channelExclusion": 0},
+            }
+        },
+        "context": {"cart": {}, "shippingCountry": "US", "userProfile": {}},
+        "settings": {"useFuzzySearch": True, "didYouMean": {}},
+        "sort": {},
+    }
+
+    all_items = []
+    offset = 0
+
+    async with httpx.AsyncClient(timeout=config.httpx_timeout) as client:
+        while True:
+            search_payload["from"] = offset
+            resp = await client.post(
+                TCGPLAYER_SEARCH_API,
+                params={"q": "", "isList": "false"},
+                json=search_payload,
+                headers={
+                    "User-Agent": config.random_user_agent(),
+                    "Content-Type": "application/json",
+                },
+            )
+            if resp.status_code != 200:
+                logger.warning(f"TCGPlayer returned {resp.status_code}")
+                break
+
+            data = resp.json()
+            results_list = data.get("results", [])
+            if not results_list:
+                break
+
+            items = results_list[0].get("results", [])
+            if not items:
+                break
+
+            all_items.extend(items)
+            total = results_list[0].get("totalResults", 0)
+            logger.info(f"  Fetched {len(all_items)}/{total} JP products...")
+
+            if len(all_items) >= total:
+                break
+            offset += 50
+            await asyncio.sleep(0.3)
+
+    # Extract unique sets from product results
+    sets_by_name: dict[str, dict] = {}
+    for item in all_items:
+        set_name = item.get("setName", "")
+        set_url_name = item.get("setUrlName", "")
+        if set_name and set_name not in sets_by_name:
+            sets_by_name[set_name] = {
+                "name": set_name,
+                "code": set_url_name or set_name.lower().replace(" ", "-"),
+                "series": infer_jp_series(set_name),
+            }
+
+    logger.info(
+        f"Found {len(sets_by_name)} unique Japanese sets from {len(all_items)} products"
+    )
+    return list(sets_by_name.values())
+
+
 async def main():
     parser = argparse.ArgumentParser(description="Seed Pokemon TCG sets")
     parser.add_argument("--year-from", type=int, default=None, help="Override minimum year")
     parser.add_argument("--dry-run", action="store_true", help="Print sets without inserting")
+    parser.add_argument("--language", default="en", choices=["en", "ja"], help="Language (en or ja)")
     args = parser.parse_args()
 
     config = Config()
+
+    if args.language == "ja":
+        # Japanese: discover sets from TCGPlayer
+        logger.info("Discovering Japanese sets from TCGPlayer...")
+        jp_sets = await discover_japanese_sets(config)
+
+        if args.dry_run:
+            for s in jp_sets:
+                logger.info(f"  {s['name']} (code={s['code']}, series={s['series'] or '?'})")
+            logger.info(f"Dry run: {len(jp_sets)} JP sets would be seeded")
+            return
+
+        db = Database(config)
+        results = {"success": 0, "failed": 0}
+
+        for jp_set in jp_sets:
+            try:
+                model = PokemonSet(
+                    name=jp_set["name"],
+                    code=jp_set["code"],
+                    series=jp_set["series"],
+                    language="ja",
+                    set_url=f"https://www.tcgplayer.com/search/pokemon/{jp_set['code']}",
+                    is_in_print=True,
+                    is_in_rotation=True,
+                )
+                db.upsert_set(model)
+                results["success"] += 1
+                logger.info(f"  Seeded: {model.name} ({model.code})")
+            except Exception as e:
+                results["failed"] += 1
+                logger.error(f"  Failed: {jp_set['name']}: {e}")
+
+        output = {"language": "ja", "total_sets": len(jp_sets), **results}
+        output_path = config.tmp_dir / "seed_sets_jp_results.json"
+        with open(output_path, "w") as f:
+            json.dump(output, f, indent=2)
+
+        logger.info(f"Done! {results['success']} JP sets seeded, {results['failed']} failed")
+        return
+
+    # English: existing behavior
     min_year = args.year_from or config.min_set_year
 
     # Step 1: Fetch sets from Pokemon TCG API

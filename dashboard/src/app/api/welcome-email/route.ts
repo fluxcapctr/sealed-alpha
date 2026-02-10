@@ -1,7 +1,9 @@
 import { Resend } from "resend";
 import { NextResponse } from "next/server";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 
 export async function POST(request: Request) {
   try {
@@ -12,7 +14,7 @@ export async function POST(request: Request) {
     }
 
     // Skip if no API key configured (dev mode)
-    if (!process.env.RESEND_API_KEY) {
+    if (!resend) {
       console.log(`[Welcome Email] Would send to ${email} (no API key)`);
       return NextResponse.json({ success: true, skipped: true });
     }

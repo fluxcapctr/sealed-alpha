@@ -1,11 +1,12 @@
 """
 Seed sealed products for each set from TCGPlayer into Supabase.
 
-Uses TCGPlayer's search API or Playwright to discover sealed products
+Uses TCGPlayer's search API to discover sealed products
 for each set already in the database.
 
 Usage:
     python tools/seed_products.py
+    python tools/seed_products.py --language ja
     python tools/seed_products.py --set-id UUID
     python tools/seed_products.py --dry-run
 """
@@ -42,16 +43,17 @@ PRODUCT_TYPE_MAP = {
 
 
 async def search_tcgplayer_products(
-    set_name: str, product_type: str | None, config: Config
+    set_name: str, product_type: str | None, config: Config, language: str = "en"
 ) -> list[dict]:
     """Search TCGPlayer for sealed products matching the set and type."""
+    product_line = "pokemon-japan" if language == "ja" else "pokemon"
     search_payload = {
         "algorithm": "sales_synonym_v2",
         "from": 0,
         "size": 50,
         "filters": {
             "term": {
-                "productLineName": ["pokemon"],
+                "productLineName": [product_line],
                 "productTypeName": ["Sealed Products"],
             },
             "range": {},
@@ -122,7 +124,7 @@ def classify_product_type(product_name: str) -> str:
     return "Other"
 
 
-def tcgplayer_item_to_product(item: dict, set_id: str) -> Product | None:
+def tcgplayer_item_to_product(item: dict, set_id: str, language: str = "en") -> Product | None:
     """Convert a TCGPlayer search result item to a Product model."""
     name = item.get("productName", "")
     product_type = classify_product_type(name)
@@ -140,9 +142,6 @@ def tcgplayer_item_to_product(item: dict, set_id: str) -> Product | None:
     if image_url and not image_url.startswith("http"):
         image_url = f"https://tcgplayer-cdn.tcgplayer.com/product/{tcgplayer_id}_200w.jpg"
 
-    market_price = item.get("marketPrice")
-    lowest_price = item.get("lowestPrice")
-
     return Product(
         set_id=set_id,
         name=name,
@@ -151,11 +150,13 @@ def tcgplayer_item_to_product(item: dict, set_id: str) -> Product | None:
         tcgplayer_url=url,
         image_url=image_url,
         is_active=True,
+        language=language,
     )
 
 
 async def seed_products_for_set(
-    set_data: dict, db: Database, config: Config, dry_run: bool = False
+    set_data: dict, db: Database, config: Config, dry_run: bool = False,
+    language: str = "en",
 ) -> dict:
     """Discover and seed products for a single set."""
     set_name = set_data["name"]
@@ -163,18 +164,18 @@ async def seed_products_for_set(
 
     logger.info(f"Discovering products for: {set_name}")
 
-    items = await search_tcgplayer_products(set_name, None, config)
+    items = await search_tcgplayer_products(set_name, None, config, language=language)
 
     results = {"found": len(items), "seeded": 0, "skipped": 0, "failed": 0}
 
     for item in items:
-        product = tcgplayer_item_to_product(item, set_id)
+        product = tcgplayer_item_to_product(item, set_id, language)
         if not product:
             results["skipped"] += 1
             continue
 
-        # Skip product types we don't track
-        if product.product_type == "Other":
+        # For English, skip "Other" types. For Japanese, keep them.
+        if product.product_type == "Other" and language == "en":
             results["skipped"] += 1
             continue
 
@@ -205,6 +206,7 @@ async def main():
     parser = argparse.ArgumentParser(description="Seed sealed products from TCGPlayer")
     parser.add_argument("--set-id", help="Seed products for a specific set ID")
     parser.add_argument("--dry-run", action="store_true", help="Print products without inserting")
+    parser.add_argument("--language", default="en", choices=["en", "ja"], help="Language (en or ja)")
     args = parser.parse_args()
 
     config = Config()
@@ -217,14 +219,16 @@ async def main():
             return
         sets = [set_data]
     else:
-        sets = db.get_sets()
+        sets = db.get_sets(language=args.language)
 
-    logger.info(f"Seeding products for {len(sets)} sets...")
+    logger.info(f"Seeding products for {len(sets)} {args.language.upper()} sets...")
 
     all_results = {"total_found": 0, "total_seeded": 0, "total_skipped": 0, "total_failed": 0}
 
     for set_data in sets:
-        results = await seed_products_for_set(set_data, db, config, args.dry_run)
+        results = await seed_products_for_set(
+            set_data, db, config, args.dry_run, language=args.language
+        )
         all_results["total_found"] += results["found"]
         all_results["total_seeded"] += results["seeded"]
         all_results["total_skipped"] += results["skipped"]
@@ -234,7 +238,8 @@ async def main():
         await asyncio.sleep(config.random_delay())
 
     # Save results
-    output_path = config.tmp_dir / "seed_products_results.json"
+    suffix = f"_{args.language}" if args.language != "en" else ""
+    output_path = config.tmp_dir / f"seed_products{suffix}_results.json"
     with open(output_path, "w") as f:
         json.dump(all_results, f, indent=2)
 

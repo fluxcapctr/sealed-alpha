@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { HoverGlowButton } from "@/components/hover-glow-button";
+import { HIDDEN_SUBSETS } from "@/lib/constants";
 
 export default async function LandingPage() {
   const supabase = await createClient();
@@ -12,9 +13,10 @@ export default async function LandingPage() {
     .select("*", { count: "exact", head: true })
     .eq("is_active", true);
 
-  const { count: setCount } = await supabase
+  const { data: allSets } = await supabase
     .from("sets")
-    .select("*", { count: "exact", head: true });
+    .select("name");
+  const setCount = (allSets ?? []).filter((s) => !HIDDEN_SUBSETS.has(s.name)).length;
 
   return (
     <div className="flex min-h-[100dvh] flex-col items-center justify-center px-5 py-12 sm:px-6 sm:py-16">

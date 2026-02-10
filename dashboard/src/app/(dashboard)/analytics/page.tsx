@@ -27,6 +27,7 @@ import { SealedPremiumIndex } from "@/components/sealed-premium-index";
 import { PullRatesTable, type PullRateRow } from "@/components/pull-rates-table";
 import { RipScoreCard, type RipScoreRow } from "@/components/rip-score-card";
 import { TrendingUp, Package, Layers } from "lucide-react";
+import { HIDDEN_SUBSETS } from "@/lib/constants";
 import type { ProductAnalytics } from "@/types/database";
 
 export const revalidate = 300;
@@ -327,7 +328,7 @@ export default async function AnalyticsPage() {
     (sum, s) => sum + (s.total_set_value ?? 0),
     0
   );
-  const setsWithValues = (setsData ?? []).filter((s) => s.total_set_value).length;
+  const setsWithValues = (setsData ?? []).filter((s) => s.total_set_value && !HIDDEN_SUBSETS.has(s.name)).length;
 
   // Stats by product type
   const byType = new Map<
@@ -588,7 +589,7 @@ export default async function AnalyticsPage() {
         <StatCard
           title="Products Tracked"
           value={products.length.toString()}
-          subtitle={`${new Set(products.map((p) => p.set_id)).size} sets`}
+          subtitle={`${(allSetsData ?? []).filter((s) => !HIDDEN_SUBSETS.has(s.name)).length} sets`}
           icon={Package}
         />
         <StatCard

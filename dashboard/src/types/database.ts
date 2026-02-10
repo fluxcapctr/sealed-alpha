@@ -18,6 +18,7 @@ export type Database = {
           total_cards: number | null;
           set_value_updated_at: string | null;
           top_card_image_url: string | null;
+          language: string;
           created_at: string;
           updated_at: string;
         };
@@ -36,6 +37,7 @@ export type Database = {
           total_set_value?: number | null;
           total_cards?: number | null;
           top_card_image_url?: string | null;
+          language?: string;
         };
         Update: {
           id?: string;
@@ -52,6 +54,7 @@ export type Database = {
           total_set_value?: number | null;
           total_cards?: number | null;
           top_card_image_url?: string | null;
+          language?: string;
         };
         Relationships: [
           {
@@ -75,6 +78,7 @@ export type Database = {
           release_date: string | null;
           msrp: number | null;
           is_active: boolean;
+          language: string;
           created_at: string;
           updated_at: string;
         };
@@ -89,6 +93,7 @@ export type Database = {
           release_date?: string | null;
           msrp?: number | null;
           is_active?: boolean;
+          language?: string;
         };
         Update: {
           id?: string;
@@ -101,6 +106,7 @@ export type Database = {
           release_date?: string | null;
           msrp?: number | null;
           is_active?: boolean;
+          language?: string;
         };
         Relationships: [
           {
@@ -411,6 +417,7 @@ export type Database = {
           release_date: string | null;
           is_in_print: boolean;
           is_in_rotation: boolean;
+          language: string | null;
           days_since_release: number | null;
           current_price: number | null;
           current_low: number | null;

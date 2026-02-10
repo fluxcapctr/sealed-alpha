@@ -19,6 +19,7 @@ class PokemonSet:
     is_in_print: bool = True
     is_in_rotation: bool = True
     total_products: int = 0
+    language: str = "en"
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -44,6 +45,7 @@ class Product:
     release_date: Optional[str] = None
     msrp: Optional[float] = None
     is_active: bool = True
+    language: str = "en"
 
     def to_dict(self) -> dict:
         d = asdict(self)

@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import Link from "next/link";
+import { HIDDEN_SUBSETS } from "@/lib/constants";
 import type { ProductAnalytics } from "@/types/database";
 
 export const revalidate = 300;
@@ -20,16 +21,19 @@ export const revalidate = 300;
 export default async function OverviewPage() {
   const supabase = await createClient();
 
-  const { data: analytics } = await supabase
-    .from("product_analytics")
-    .select("*")
-    .order("current_price", { ascending: false })
-    .returns<ProductAnalytics[]>();
+  const [{ data: analytics }, { data: allSets }] = await Promise.all([
+    supabase
+      .from("product_analytics")
+      .select("*")
+      .order("current_price", { ascending: false })
+      .returns<ProductAnalytics[]>(),
+    supabase.from("sets").select("name"),
+  ]);
 
   const products = analytics ?? [];
 
   const totalProducts = products.length;
-  const totalSets = new Set(products.map((p) => p.set_id)).size;
+  const totalSets = (allSets ?? []).filter((s) => !HIDDEN_SUBSETS.has(s.name)).length;
   const buySignals = products.filter(
     (p) =>
       p.signal_recommendation === "BUY" ||

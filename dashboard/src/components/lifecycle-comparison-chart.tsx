@@ -15,7 +15,6 @@ import {
   ChartLegend,
   ChartLegendContent,
   ChartTooltip,
-  ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
 import {
@@ -79,6 +78,77 @@ export type InitialSelection = {
   set_id: string;
   product_id: string;
 };
+
+function LifecycleTooltip({
+  active,
+  payload,
+  label,
+  product1,
+  product2,
+}: {
+  active?: boolean;
+  payload?: Array<{ value: number; dataKey: string }>;
+  label?: string;
+  product1?: ProductOption;
+  product2?: ProductOption;
+}) {
+  if (!active || !payload?.length) return null;
+
+  const dateStr = typeof label === "string" ? label : "";
+  const dateLabel = dateStr
+    ? new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "";
+
+  function getDaysOld(product?: ProductOption) {
+    if (!dateStr || !product?.release_date) return null;
+    const releaseMs = new Date(product.release_date).getTime();
+    const dateMs = new Date(dateStr + "T00:00:00").getTime();
+    return Math.floor((dateMs - releaseMs) / 86_400_000);
+  }
+
+  const entries = [
+    { dataKey: "product1", product: product1, color: "var(--color-product1)" },
+    { dataKey: "product2", product: product2, color: "var(--color-product2)" },
+  ];
+
+  return (
+    <div className="border-border/50 bg-background rounded-lg border px-3 py-2 text-xs shadow-xl">
+      <p className="font-medium mb-1.5">{dateLabel}</p>
+      <div className="grid gap-1.5">
+        {entries.map((entry) => {
+          const match = payload.find((p) => p.dataKey === entry.dataKey);
+          if (!match) return null;
+          const daysOld = getDaysOld(entry.product);
+          return (
+            <div key={entry.dataKey}>
+              <div className="flex items-center gap-2">
+                <div
+                  className="h-2 w-2 rounded-[2px]"
+                  style={{ backgroundColor: entry.color }}
+                />
+                <span className="text-muted-foreground">
+                  {entry.product?.product_name ?? "Product"}:
+                </span>
+                <span className="font-mono font-medium ml-auto">
+                  ${match.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              {daysOld !== null && (
+                <p className="text-[10px] text-muted-foreground ml-4">
+                  Day {daysOld.toLocaleString()} since release
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export function LifecycleComparisonChart({
   products,
@@ -350,38 +420,7 @@ export function LifecycleComparisonChart({
               <ChartTooltip
                 cursor={false}
                 content={
-                  <ChartTooltipContent
-                    labelFormatter={(value: string) => {
-                      const d = new Date(value + "T00:00:00");
-                      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-                    }}
-                    formatter={((
-                      value: number | string,
-                      name: string,
-                      item: { payload?: { date?: string } },
-                    ) => {
-                      if (value == null) return "—";
-                      const num = typeof value === "number" ? value : Number(value);
-                      const date = item?.payload?.date;
-                      const product = name === "product1" ? product1 : product2;
-                      let daysOld: number | null = null;
-                      if (date && product?.release_date) {
-                        const releaseMs = new Date(product.release_date).getTime();
-                        const dateMs = new Date(date + "T00:00:00").getTime();
-                        daysOld = Math.floor((dateMs - releaseMs) / 86_400_000);
-                      }
-                      return (
-                        <span className="flex flex-col">
-                          <span className="text-sm font-semibold tabular-nums">${num.toFixed(2)}</span>
-                          {daysOld !== null && (
-                            <span className="text-[10px] text-muted-foreground">Day {daysOld.toLocaleString()} since release</span>
-                          )}
-                        </span>
-                      );
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    }) as any}
-                    indicator="dot"
-                  />
+                  <LifecycleTooltip product1={product1} product2={product2} />
                 }
               />
               <Area

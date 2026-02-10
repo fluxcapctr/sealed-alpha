@@ -81,12 +81,16 @@ def normalize(name: str) -> str:
     )
 
 
-async def fetch_pokedata_sets(client: httpx.AsyncClient) -> list[dict]:
-    """Fetch all sets from pokedata.io, return only English sets."""
+LANGUAGE_MAP = {"en": "ENGLISH", "ja": "JAPANESE"}
+
+
+async def fetch_pokedata_sets(client: httpx.AsyncClient, language: str = "en") -> list[dict]:
+    """Fetch all sets from pokedata.io, filtered by language."""
     resp = await client.get(f"{POKEDATA_BASE}/sets")
     resp.raise_for_status()
     all_sets = resp.json()
-    return [s for s in all_sets if s.get("language") == "ENGLISH"]
+    lang_filter = LANGUAGE_MAP.get(language, "ENGLISH")
+    return [s for s in all_sets if s.get("language") == lang_filter]
 
 
 def build_set_mapping(
@@ -152,11 +156,19 @@ async def fetch_set_cards(
     client: httpx.AsyncClient, pokedata_set_id: int
 ) -> list[dict]:
     """Fetch all cards for a set from pokedata.io."""
-    resp = await client.get(
-        f"{POKEDATA_BASE}/cards", params={"set_id": pokedata_set_id}
-    )
+    for attempt in range(3):
+        resp = await client.get(
+            f"{POKEDATA_BASE}/cards", params={"set_id": pokedata_set_id}
+        )
+        if resp.status_code == 429:
+            wait = 5 * (attempt + 1)
+            logger.warning(f"Rate limited on cards (set {pokedata_set_id}), waiting {wait}s...")
+            await asyncio.sleep(wait)
+            continue
+        resp.raise_for_status()
+        return resp.json()
     resp.raise_for_status()
-    return resp.json()
+    return []
 
 
 async def fetch_card_stats(
@@ -169,9 +181,16 @@ async def fetch_card_stats(
     for i in range(0, len(card_ids), chunk_size):
         chunk = card_ids[i : i + chunk_size]
         params = [("id", cid) for cid in chunk]
-        resp = await client.get(f"{POKEDATA_BASE}/cards/stats", params=params)
-        resp.raise_for_status()
-        all_stats.extend(resp.json())
+        for attempt in range(3):
+            resp = await client.get(f"{POKEDATA_BASE}/cards/stats", params=params)
+            if resp.status_code == 429:
+                wait = 5 * (attempt + 1)
+                logger.warning(f"Rate limited on stats, waiting {wait}s...")
+                await asyncio.sleep(wait)
+                continue
+            resp.raise_for_status()
+            all_stats.extend(resp.json())
+            break
         if i + chunk_size < len(card_ids):
             await asyncio.sleep(0.3)
 
@@ -397,19 +416,24 @@ async def main():
         action="store_true",
         help="Also scrape per-rarity value breakdowns via pokemontcg.io",
     )
+    parser.add_argument(
+        "--language", default="en", choices=["en", "ja"],
+        help="Language (en or ja)",
+    )
     args = parser.parse_args()
 
     config = Config()
     db = Database(config)
 
     # Fetch our sets and pokedata sets
-    db_sets = db.get_sets()
+    db_sets = db.get_sets(language=args.language)
 
     async with httpx.AsyncClient(timeout=30) as client:
-        pokedata_sets = await fetch_pokedata_sets(client)
+        pokedata_sets = await fetch_pokedata_sets(client, args.language)
 
+    lang_label = LANGUAGE_MAP.get(args.language, "ENGLISH")
     logger.info(
-        "Found %d English sets on pokedata.io", len(pokedata_sets)
+        "Found %d %s sets on pokedata.io", len(pokedata_sets), lang_label
     )
 
     # Build mapping
@@ -449,8 +473,8 @@ async def main():
             result = await scrape_set_value(client, db, s, pd_id, args.dry_run, args.rarity)
             if result:
                 results.append(result)
-            # Brief delay to be polite
-            await asyncio.sleep(0.5)
+            # Delay to avoid rate limiting (pokedata.io returns 429 at high rates)
+            await asyncio.sleep(1.5)
 
     elapsed = time.time() - start
     total_market = sum(r["value"] for r in results)
