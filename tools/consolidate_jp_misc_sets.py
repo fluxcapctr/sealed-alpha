@@ -37,6 +37,11 @@ MERGE_PATTERNS = [
     r"promotional",
     r"promo",
     r"pokemon.e starter",
+    r"battle master deck",
+    r"special deck set",
+    r"special set",
+    r"battle academy",
+    r"tcg classic",
 ]
 
 TARGET_SET_NAME = "Japan Special Products"

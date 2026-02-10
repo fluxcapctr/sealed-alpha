@@ -39,6 +39,7 @@ PRICE_SOURCE = 0.0  # TCGPlayer market price source
 
 # Manual overrides for set name mapping (our DB name → pokedata name)
 NAME_OVERRIDES: dict[str, str] = {
+    # English overrides
     "151": "Pokemon Card 151",
     "Scarlet & Violet": "Scarlet & Violet Base",
     "Scarlet & Violet Black Star Promos": "Scarlet & Violet Promos",
@@ -49,6 +50,37 @@ NAME_OVERRIDES: dict[str, str] = {
     "McDonald's Collection 2018": "Mcdonald's Promos 2018",
     "Pokémon GO": "Pokemon GO",
     "Pokémon Futsal Collection": "Pokemon Futsal Collection",
+    # Japanese overrides (TCGPlayer name → PokeDATA name)
+    "SV2a: Pokemon Card 151": "Pokemon Card 151 Japanese",
+    "SV8a: Terastal Fest ex": "Terastal Festival ex",
+    "SV11W: White Flare": "White Flare Japanese",
+    "SV11B: Black Bolt": "Black Bolt Japanese",
+    "S4a: Shiny Star V": "Shiny Star V s4A",
+    "SM12a: TAG TEAM GX: Tag All Stars": "Tag Team GX All Stars",
+    "S4: Amazing Volt Tackle": "Astonishing Volt Tackle",
+    "SV6: Transformation Mask": "Mask of Change",
+    "SM6: Forbidden Light": "Forbidden Light Japanese",
+    "SM8: Super-Burst Impact": "Explosive Impact",
+    "SM7: Sky-Splitting Charisma": "Charisma of the Cracked Sky",
+    "S7D: Skyscraping Perfection": "Towering Perfection",
+    "SM3+: Shining Legends": "Shining Legends Japanese",
+    "SM3H: To Have Seen the Battle Rainbow": "Seen the Rainbow Battle",
+    "SM3N: Darkness that Consumes Light": "Light Consuming Darkness",
+    "SM4A: Ultradimensional Beasts": "Transdimensional Beast",
+    "SM1+: Sun & Moon": "Strength Expansion Pack Sun & Moon",
+    "S5a: Peerless Fighters": "Matchless Fighter",
+    "S10b: Pokemon GO": "Pokemon GO Japanese",
+    "SV9a: Heat Wave Arena": "Hot Air Arena",
+    "S6K: Jet-Black Spirit": "Jet Black Spirit",
+    "SV10: The Glory of Team Rocket": "Glory of Team Rocket",
+    "M2: Inferno X": "Inferno X",
+    "M2a: High Class Pack: MEGA Dream ex": "Mega Dream",
+    "m1L: Mega Brave": "Mega Brave",
+    "m1S: Mega Symphonia": "Mega Symphonia",
+    "S12: Paradigm Trigger": "Paradigm Trigger",
+    "S11: Lost Abyss": "Lost Abyss",
+    "S12a: VSTAR Universe": "VSTAR Universe",
+    "Pokemon TCG Classic: Charizard": "Trading Card Game Classic Japanese Charizard",
 }
 
 # Sets in our DB that are sub-sets (trainer galleries, shiny vaults)
