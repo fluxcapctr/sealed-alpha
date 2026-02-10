@@ -220,11 +220,13 @@ export default async function SetDetailPage({
       {/* Hero Header */}
       <div className="relative overflow-hidden rounded-xl border border-border">
         {set.top_card_image_url ? (
-          <img
-            src={set.top_card_image_url}
-            alt=""
-            className="absolute -inset-3 w-[calc(100%+24px)] h-[calc(100%+24px)] object-cover object-[center_20%] blur-[1px] opacity-40"
-          />
+          <div className="absolute inset-0 overflow-hidden">
+            <img
+              src={set.top_card_image_url}
+              alt=""
+              className="h-full w-full object-cover object-[center_20%] blur-[1px] opacity-40 scale-110"
+            />
+          </div>
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-muted/50 to-muted/20" />
         )}

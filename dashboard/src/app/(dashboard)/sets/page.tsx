@@ -83,11 +83,13 @@ export default async function SetsPage({
                 <div className="relative overflow-hidden rounded-xl border border-border group transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5">
                   {/* Background card art */}
                   {set.top_card_image_url ? (
-                    <img
-                      src={set.top_card_image_url}
-                      alt=""
-                      className="absolute -inset-3 w-[calc(100%+24px)] h-[calc(100%+24px)] object-cover object-[center_20%] blur-[1px] opacity-40 transition-all duration-500 ease-out group-hover:opacity-55 group-hover:scale-[1.03]"
-                    />
+                    <div className="absolute inset-0 overflow-hidden">
+                      <img
+                        src={set.top_card_image_url}
+                        alt=""
+                        className="h-full w-full object-cover object-[center_20%] blur-[1px] opacity-40 scale-110 transition-all duration-500 ease-out group-hover:opacity-55 group-hover:scale-[1.15]"
+                      />
+                    </div>
                   ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-muted/50 to-muted/20" />
                   )}
