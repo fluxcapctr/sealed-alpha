@@ -224,7 +224,7 @@ export default async function SetDetailPage({
             <img
               src={set.top_card_image_url}
               alt=""
-              className="h-full w-full object-cover object-[center_20%] blur-[1px] opacity-40 scale-110"
+              className="h-full w-full object-cover object-center blur-[2px] opacity-40 scale-125"
             />
           </div>
         ) : (
