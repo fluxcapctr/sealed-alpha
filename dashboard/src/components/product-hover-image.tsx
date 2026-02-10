@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
 
 interface ProductHoverImageProps {
@@ -15,15 +15,31 @@ export function ProductHoverImage({
   name,
 }: ProductHoverImageProps) {
   const [show, setShow] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const ref = useRef<HTMLDivElement>(null);
 
   const imageUrl = tcgplayerProductId
     ? `https://product-images.tcgplayer.com/fit-in/200x200/${tcgplayerProductId}.jpg`
     : null;
 
+  const handleEnter = useCallback(() => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      // Show above the element; if too close to top, show below
+      const showAbove = rect.top > 220;
+      setPos({
+        top: showAbove ? rect.top - 210 : rect.bottom + 4,
+        left: rect.left,
+      });
+    }
+    setShow(true);
+  }, []);
+
   return (
     <div
+      ref={ref}
       className="relative inline-block"
-      onMouseEnter={() => setShow(true)}
+      onMouseEnter={handleEnter}
       onMouseLeave={() => setShow(false)}
     >
       <Link
@@ -33,7 +49,10 @@ export function ProductHoverImage({
         {name}
       </Link>
       {show && imageUrl && (
-        <div className="absolute left-0 top-full z-50 mt-1 rounded-lg border border-border bg-card p-1 shadow-xl">
+        <div
+          className="fixed z-50 rounded-lg border border-border bg-card p-1 shadow-xl pointer-events-none"
+          style={{ top: pos.top, left: pos.left }}
+        >
           <img
             src={imageUrl}
             alt={name}
