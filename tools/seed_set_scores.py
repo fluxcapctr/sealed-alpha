@@ -47,13 +47,21 @@ WEIGHTS = {
 }
 TOTAL_WEIGHT = sum(WEIGHTS.values())  # 7.2
 
-# Thresholds: weighted avg → grade
+# Thresholds: weighted avg → grade (with +/- modifiers, S tier has no +/-)
 GRADE_THRESHOLDS = [
     (8.0, "S"),
-    (7.0, "A"),
-    (5.5, "B"),
-    (4.5, "C"),
-    (3.5, "D"),
+    (7.5, "A+"),
+    (7.25, "A"),
+    (7.0, "A-"),
+    (6.5, "B+"),
+    (6.0, "B"),
+    (5.5, "B-"),
+    (5.0, "C+"),
+    (4.75, "C"),
+    (4.5, "C-"),
+    (4.0, "D+"),
+    (3.75, "D"),
+    (3.5, "D-"),
 ]
 
 
@@ -123,7 +131,7 @@ SET_SCORES = {
     },
     "Twilight Masquerade": {
         "grade": "B",
-        "chase": 7, "art": 8, "nostalgia": 4, "fun": 7, "scarcity": 5, "depth": 6
+        "chase": 7, "art": 8, "nostalgia": 4, "fun": 7, "scarcity": 5, "depth": 6,
         "chase_card": "Ogerpon ex SIR",
         "notes": "A one-card set saved by the Greninja ex SIR; otherwise has low lows and lackluster Ogerpon cards.",
     },

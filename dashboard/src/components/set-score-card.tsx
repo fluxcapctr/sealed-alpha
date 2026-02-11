@@ -11,7 +11,7 @@ import {
 import { InfoTip } from "@/components/info-tip";
 import type { SetScore } from "@/types/database";
 
-const GRADE_STYLES: Record<string, { text: string; bg: string; border: string; fill: string; stroke: string }> = {
+const BASE_GRADE_STYLES: Record<string, { text: string; bg: string; border: string; fill: string; stroke: string }> = {
   S: { text: "text-yellow-400", bg: "bg-yellow-500/15", border: "border-yellow-500/30", fill: "rgba(234, 179, 8, 0.25)", stroke: "rgb(234, 179, 8)" },
   A: { text: "text-emerald-400", bg: "bg-emerald-500/15", border: "border-emerald-500/30", fill: "rgba(16, 185, 129, 0.25)", stroke: "rgb(16, 185, 129)" },
   B: { text: "text-blue-400", bg: "bg-blue-500/15", border: "border-blue-500/30", fill: "rgba(59, 130, 246, 0.25)", stroke: "rgb(59, 130, 246)" },
@@ -19,6 +19,12 @@ const GRADE_STYLES: Record<string, { text: string; bg: string; border: string; f
   D: { text: "text-orange-400", bg: "bg-orange-500/15", border: "border-orange-500/30", fill: "rgba(249, 115, 22, 0.25)", stroke: "rgb(249, 115, 22)" },
   F: { text: "text-red-400", bg: "bg-red-500/15", border: "border-red-500/30", fill: "rgba(239, 68, 68, 0.25)", stroke: "rgb(239, 68, 68)" },
 };
+
+/** Look up style by base letter (A+/A/A- all use A's colors) */
+function getGradeStyle(grade: string) {
+  const base = grade.charAt(0);
+  return BASE_GRADE_STYLES[base] ?? BASE_GRADE_STYLES.F;
+}
 
 const DIMENSIONS = [
   { key: "chase_card_score" as const, label: "Chase" },
@@ -37,7 +43,7 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function SetScoreCard({ score }: { score: SetScore }) {
-  const style = GRADE_STYLES[score.overall_grade] ?? GRADE_STYLES.F;
+  const style = getGradeStyle(score.overall_grade);
 
   const chartData = DIMENSIONS.map((dim) => ({
     dimension: dim.label,
@@ -73,9 +79,9 @@ export function SetScoreCard({ score }: { score: SetScore }) {
         <div className="flex items-center gap-2">
           <div className="flex flex-col items-center gap-1 flex-shrink-0">
             <div
-              className={`flex h-16 w-16 items-center justify-center rounded-xl border-2 ${style.bg} ${style.border}`}
+              className={`flex h-16 ${score.overall_grade.length > 1 ? "w-20" : "w-16"} items-center justify-center rounded-xl border-2 ${style.bg} ${style.border}`}
             >
-              <span className={`text-4xl font-black ${style.text}`}>
+              <span className={`${score.overall_grade.length > 1 ? "text-3xl" : "text-4xl"} font-black ${style.text}`}>
                 {score.overall_grade}
               </span>
             </div>
@@ -153,10 +159,10 @@ export function SetScoreCard({ score }: { score: SetScore }) {
 
 /** Small grade badge for the sets grid page */
 export function GradeBadge({ grade }: { grade: string }) {
-  const style = GRADE_STYLES[grade] ?? GRADE_STYLES.F;
+  const style = getGradeStyle(grade);
   return (
     <span
-      className={`inline-flex h-6 w-6 items-center justify-center rounded text-xs font-black ${style.text} ${style.bg} ${style.border} border`}
+      className={`inline-flex h-6 ${grade.length > 1 ? "w-8 text-[9px]" : "w-6 text-xs"} items-center justify-center rounded font-black ${style.text} ${style.bg} ${style.border} border`}
     >
       {grade}
     </span>
