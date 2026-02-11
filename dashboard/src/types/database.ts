@@ -382,7 +382,7 @@ export type Database = {
           art_quality_score: number;
           nostalgia_score: number;
           fun_factor_score: number;
-          scarcity_score: number;
+          value_score: number;
           set_depth_score: number;
           chase_card_name: string | null;
           notes: string | null;
@@ -397,7 +397,7 @@ export type Database = {
           art_quality_score: number;
           nostalgia_score: number;
           fun_factor_score: number;
-          scarcity_score: number;
+          value_score: number;
           set_depth_score: number;
           chase_card_name?: string | null;
           notes?: string | null;
@@ -410,7 +410,7 @@ export type Database = {
           art_quality_score?: number;
           nostalgia_score?: number;
           fun_factor_score?: number;
-          scarcity_score?: number;
+          value_score?: number;
           set_depth_score?: number;
           chase_card_name?: string | null;
           notes?: string | null;

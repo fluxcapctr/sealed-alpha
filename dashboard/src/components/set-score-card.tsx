@@ -31,7 +31,7 @@ const DIMENSIONS = [
   { key: "art_quality_score" as const, label: "Art" },
   { key: "nostalgia_score" as const, label: "Nostalgia" },
   { key: "fun_factor_score" as const, label: "Fun" },
-  { key: "scarcity_score" as const, label: "Scarcity" },
+  { key: "value_score" as const, label: "Value" },
   { key: "set_depth_score" as const, label: "Depth" },
 ];
 
@@ -60,7 +60,7 @@ export function SetScoreCard({ score }: { score: SetScore }) {
             <p className="mb-2">
               A weighted grade based on six dimensions that drive sealed product
               investment value. Weights: Nostalgia (1.5x), Chase (1.4x), Art
-              (1.2x), Depth (1.1x), Fun (1x), Scarcity (1x).
+              (1.2x), Depth (1.1x), Fun (1x), Value (1x).
             </p>
             <p className="font-semibold mb-1">Dimensions</p>
             <ul className="space-y-1 text-xs">
@@ -68,7 +68,7 @@ export function SetScoreCard({ score }: { score: SetScore }) {
               <li><strong>Art Quality</strong> — Overall IR/SIR/Alt Art roster quality</li>
               <li><strong>Nostalgia</strong> — Emotional pull, generational connection</li>
               <li><strong>Fun Factor</strong> — Pull rates + opening experience</li>
-              <li><strong>Scarcity</strong> — Print run / supply dynamics</li>
+              <li><strong>Value</strong> — Master set value vs. booster box price ratio</li>
               <li><strong>Set Depth</strong> — Chase diversity beyond the #1 card</li>
             </ul>
           </InfoTip>
