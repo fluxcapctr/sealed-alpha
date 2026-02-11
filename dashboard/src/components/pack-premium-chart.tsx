@@ -53,7 +53,7 @@ const chartConfig = {
   },
   loosePack: {
     label: "Loose Pack",
-    color: "var(--chart-4)",
+    color: "var(--chart-2)",
   },
 } satisfies ChartConfig;
 
