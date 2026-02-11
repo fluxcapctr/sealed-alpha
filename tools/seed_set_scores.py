@@ -285,25 +285,25 @@ SET_SCORES = {
     },
     "Vivid Voltage": {
         "grade": "A",
-        "chase": 8, "art": 6, "nostalgia": 7, "fun": 8, "value": 7, "depth": 5,
+        "chase": 7, "art": 6, "nostalgia": 5, "fun": 6, "value": 6, "depth": 4,
         "chase_card": "Pikachu VMAX (Rainbow / Fat Pikachu)",
         "notes": "Famous for the Chonkachu (Rainbow Pikachu VMAX), but the rest (Amazing Rares) has failed to hold long-term interest.",
     },
     "Champion's Path": {
         "grade": "B",
-        "chase": 8, "art": 7, "nostalgia": 6, "fun": 6, "value": 7, "depth": 5,
+        "chase": 7, "art": 7, "nostalgia": 5, "fun": 6, "value": 7, "depth": 5,
         "chase_card": "Charizard VMAX (Shiny)",
         "notes": "A trash set with two massive Charizard chase cards; miserable to open due to lack of other content.",
     },
     "Shining Fates": {
         "grade": "A",
-        "chase": 7, "art": 5, "nostalgia": 6, "fun": 7, "value": 8, "depth": 5,
+        "chase": 7, "art": 5, "nostalgia": 5, "fun": 6, "value": 8, "depth": 5,
         "chase_card": "Charizard VMAX (Shiny)",
         "notes": "Features a Shiny Charizard VMAX but otherwise filled with forgettable Gen 8 shiny Pokemon; printed heavily.",
     },
     "Battle Styles": {
         "grade": "C",
-        "chase": 6, "art": 6, "nostalgia": 5, "fun": 5, "value": 5, "depth": 5,
+        "chase": 6, "art": 6, "nostalgia": 5, "fun": 4, "value": 6, "depth": 5,
         "chase_card": "Tyranitar V (Alt Art)",
         "notes": "The first set to introduce Alt Arts (Tyranitar V), but lacks depth and is generally seen as one of the weaker main expansions.",
     },
@@ -357,7 +357,7 @@ SET_SCORES = {
     },
     "Celebrations": {
         "grade": "A",
-        "chase": 8, "art": 7, "nostalgia": 10, "fun": 9, "value": 8, "depth": 7,
+        "chase": 8, "art": 7, "nostalgia": 10, "fun": 9, "value": 8, "depth": 6,
         "chase_card": "Charizard (Classic Collection)",
         "notes": "Pure 25th-anniversary nostalgia. Extremely fun to open with classic reprints (Charizard, Umbreon Gold Star), though the main set is small.",
     },
@@ -421,7 +421,7 @@ SET_SCORES = {
     },
     "Lost Thunder": {
         "grade": "B",
-        "chase": 7, "art": 6, "nostalgia": 6, "fun": 5, "value": 6, "depth": 6,
+        "chase": 7, "art": 5, "nostalgia": 6, "fun": 5, "value": 5, "depth": 5,
         "chase_card": "Lugia GX (Rainbow Secret)",
         "notes": "Lugia GX and Zeraora are solid but the massive set dilutes the fun.",
     },
@@ -479,7 +479,7 @@ SET_SCORES = {
     },
     "Furious Fists": {
         "grade": "C",
-        "chase": 5, "art": 6, "nostalgia": 5, "fun": 5, "value": 7, "depth": 4,
+        "chase": 6, "art": 6, "nostalgia": 5, "fun": 5, "value": 7, "depth": 4,
         "chase_card": "Mega Lucario EX (Full Art)",
         "notes": "Unforgiving with terrible pull rates (sometimes 1 Ultra Rare per box); largely a skippable set.",
     },
@@ -503,13 +503,13 @@ SET_SCORES = {
     },
     "Ancient Origins": {
         "grade": "C",
-        "chase": 6, "art": 6, "nostalgia": 6, "fun": 5, "value": 7, "depth": 5,
+        "chase": 6, "art": 6, "nostalgia": 6, "fun": 5, "value": 7, "depth": 7,
         "chase_card": "Lugia EX (Full Art)",
         "notes": "A top contender for the era, featuring Shiny Primal Kyogre, Groudon, and Rayquaza.",
     },
     "BREAKthrough": {
         "grade": "B",
-        "chase": 7, "art": 6, "nostalgia": 7, "fun": 6, "value": 7, "depth": 6,
+        "chase": 7, "art": 6, "nostalgia": 7, "fun": 5, "value": 6, "depth": 6,
         "chase_card": "Mewtwo EX (Full Art)",
         "notes": "Mewtwo carries this set. BREAK mechanic was a fun addition.",
     },
