@@ -16,6 +16,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
 import type { BoxValueData } from "@/components/booster-box-value-chart";
 
 type Mode = "boosterBox" | "etb";
@@ -39,9 +48,19 @@ export function SealedPremiumIndex({
   etbData: BoxValueData[];
 }) {
   const [mode, setMode] = useState<Mode>("boosterBox");
+  const [page, setPage] = useState(1);
+  const perPage = 20;
 
   const data = mode === "boosterBox" ? boxData : etbData;
   const sorted = [...data].sort((a, b) => a.ratio - b.ratio);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / perPage));
+  const currentPage = Math.min(page, totalPages);
+  const paged = sorted.slice((currentPage - 1) * perPage, currentPage * perPage);
+
+  const handleModeChange = (m: Mode) => {
+    setMode(m);
+    setPage(1);
+  };
 
   return (
     <Card>
@@ -56,7 +75,7 @@ export function SealedPremiumIndex({
           </div>
           <div className="flex gap-1 rounded-lg border border-border p-0.5">
             <button
-              onClick={() => setMode("boosterBox")}
+              onClick={() => handleModeChange("boosterBox")}
               className={`rounded-md px-3 py-1 text-xs transition-colors ${
                 mode === "boosterBox"
                   ? "bg-primary text-primary-foreground"
@@ -66,7 +85,7 @@ export function SealedPremiumIndex({
               Booster Box
             </button>
             <button
-              onClick={() => setMode("etb")}
+              onClick={() => handleModeChange("etb")}
               className={`rounded-md px-3 py-1 text-xs transition-colors ${
                 mode === "etb"
                   ? "bg-primary text-primary-foreground"
@@ -93,7 +112,7 @@ export function SealedPremiumIndex({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sorted.length === 0 ? (
+            {paged.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={6}
@@ -103,12 +122,13 @@ export function SealedPremiumIndex({
                 </TableCell>
               </TableRow>
             ) : (
-              sorted.map((row, i) => {
+              paged.map((row, i) => {
                 const verdict = getVerdict(row.ratio);
+                const rank = (currentPage - 1) * perPage + i + 1;
                 return (
                   <TableRow key={row.setName}>
                     <TableCell className="text-center text-muted-foreground text-xs">
-                      {i + 1}
+                      {rank}
                     </TableCell>
                     <TableCell className="font-medium text-sm">
                       {row.setName}
@@ -133,6 +153,69 @@ export function SealedPremiumIndex({
             )}
           </TableBody>
         </Table>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="py-4">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPage((p) => Math.max(1, p - 1));
+                    }}
+                    className={currentPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                  // Show first, last, and pages near current
+                  if (
+                    p === 1 ||
+                    p === totalPages ||
+                    (p >= currentPage - 1 && p <= currentPage + 1)
+                  ) {
+                    return (
+                      <PaginationItem key={p}>
+                        <PaginationLink
+                          href="#"
+                          isActive={p === currentPage}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setPage(p);
+                          }}
+                          className="cursor-pointer"
+                        >
+                          {p}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  }
+                  // Show ellipsis at boundaries
+                  if (p === currentPage - 2 || p === currentPage + 2) {
+                    return (
+                      <PaginationItem key={p}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    );
+                  }
+                  return null;
+                })}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPage((p) => Math.min(totalPages, p + 1));
+                    }}
+                    className={currentPage >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

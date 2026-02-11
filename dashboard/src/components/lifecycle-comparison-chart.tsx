@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 export type ProductOption = {
   product_id: string;
@@ -31,6 +32,7 @@ export type ProductOption = {
   set_id: string;
   set_name: string;
   release_date: string | null;
+  language?: string;
 };
 
 type DatePrice = { date: string; price: number };
@@ -157,10 +159,20 @@ export function LifecycleComparisonChart({
   products: ProductOption[];
   initialSelections?: { slot1: InitialSelection; slot2: InitialSelection };
 }) {
+  // Language toggle — default to EN
+  const hasJp = products.some((p) => p.language === "ja");
+  const [lang, setLang] = React.useState<"en" | "ja">("en");
+
+  // Filter products by language
+  const filteredProducts = React.useMemo(
+    () => (hasJp ? products.filter((p) => (p.language ?? "en") === lang) : products),
+    [products, lang, hasJp],
+  );
+
   // Derive unique sets sorted alphabetically
   const sets = React.useMemo(() => {
     const setMap = new Map<string, string>();
-    for (const p of products) {
+    for (const p of filteredProducts) {
       if (!setMap.has(p.set_id)) {
         setMap.set(p.set_id, p.set_name);
       }
@@ -168,7 +180,7 @@ export function LifecycleComparisonChart({
     return Array.from(setMap.entries())
       .map(([id, name]) => ({ id, name }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [products]);
+  }, [filteredProducts]);
 
   // Slot 1
   const [set1, setSet1] = React.useState(initialSelections?.slot1.set_id ?? "");
@@ -184,16 +196,16 @@ export function LifecycleComparisonChart({
 
   // Filtered products per slot
   const products1 = React.useMemo(
-    () => products.filter((p) => p.set_id === set1),
-    [products, set1],
+    () => filteredProducts.filter((p) => p.set_id === set1),
+    [filteredProducts, set1],
   );
   const products2 = React.useMemo(
-    () => products.filter((p) => p.set_id === set2),
-    [products, set2],
+    () => filteredProducts.filter((p) => p.set_id === set2),
+    [filteredProducts, set2],
   );
 
-  const product1 = products.find((p) => p.product_id === product1Id);
-  const product2 = products.find((p) => p.product_id === product2Id);
+  const product1 = filteredProducts.find((p) => p.product_id === product1Id);
+  const product2 = filteredProducts.find((p) => p.product_id === product2Id);
 
   // Fetch price data for a product
   const fetchPriceData = React.useCallback(
@@ -251,6 +263,18 @@ export function LifecycleComparisonChart({
     setData2([]);
   };
 
+  // Reset all selections when language changes
+  const handleLangChange = (val: string) => {
+    if (!val) return; // ToggleGroup can fire empty when deselecting
+    setLang(val as "en" | "ja");
+    setSet1("");
+    setProduct1Id("");
+    setData1([]);
+    setSet2("");
+    setProduct2Id("");
+    setData2([]);
+  };
+
   // Merge chart data
   const chartData = React.useMemo(() => {
     if (data1.length === 0 && data2.length === 0) return [];
@@ -286,11 +310,28 @@ export function LifecycleComparisonChart({
   return (
     <Card className="pt-0">
       <CardHeader className="flex flex-col gap-4 border-b py-5">
-        <div>
-          <CardTitle>Lifecycle Comparison</CardTitle>
-          <CardDescription>
-            Compare price trajectories of two products over calendar time
-          </CardDescription>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <CardTitle>Lifecycle Comparison</CardTitle>
+            <CardDescription>
+              Compare price trajectories of two products over calendar time
+            </CardDescription>
+          </div>
+          {hasJp && (
+            <ToggleGroup
+              type="single"
+              value={lang}
+              onValueChange={handleLangChange}
+              className="flex-shrink-0"
+            >
+              <ToggleGroupItem value="en" className="text-xs px-3 h-8">
+                English
+              </ToggleGroupItem>
+              <ToggleGroupItem value="ja" className="text-xs px-3 h-8">
+                Japanese
+              </ToggleGroupItem>
+            </ToggleGroup>
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

@@ -38,7 +38,7 @@ export default async function AnalyticsPage() {
   const { data: analytics } = await supabase
     .from("product_analytics")
     .select(
-      "product_id, product_name, product_type, set_id, set_name, series, release_date, is_in_print, current_price, current_quantity, current_listings, quantity_7d_ago, quantity_30d_ago, quantity_90d_ago"
+      "product_id, product_name, product_type, set_id, set_name, series, release_date, is_in_print, current_price, current_quantity, current_listings, quantity_7d_ago, quantity_30d_ago, quantity_90d_ago, language"
     )
     .returns<
       Pick<
@@ -57,6 +57,7 @@ export default async function AnalyticsPage() {
         | "quantity_7d_ago"
         | "quantity_30d_ago"
         | "quantity_90d_ago"
+        | "language"
       >[]
     >();
 
@@ -608,6 +609,7 @@ export default async function AnalyticsPage() {
           set_id: p.set_id,
           set_name: p.set_name,
           release_date: p.release_date,
+          language: p.language ?? "en",
         }))}
         initialSelections={lifecycleInitial}
       />
