@@ -208,14 +208,17 @@ export default async function SetDetailPage({
   const boosterBox = findStandardProduct("Booster Box");
   const etb = findStandardProduct("Elite Trainer Box");
 
+  // ETB pack count varies by era: SV = 9, SWSH/SM/XY = 8
+  const etbPacks = set.series === "Scarlet & Violet" ? 9 : 8;
+
   // Determine flagship product: booster box if available, otherwise ETB
   const hasBoosterBox = boosterBox !== null;
-  const primaryPacks = hasBoosterBox ? 36 : 9;
+  const primaryPacks = hasBoosterBox ? 36 : etbPacks;
   const primaryLabel = hasBoosterBox ? "Booster Box" : "Elite Trainer Box";
   const primaryProduct = hasBoosterBox ? boosterBox : etb;
 
   const primaryEv = computeBoxEv(pullRates, rarityValues, primaryPacks);
-  const secondaryEv = hasBoosterBox ? computeBoxEv(pullRates, rarityValues, 9) : null;
+  const secondaryEv = hasBoosterBox ? computeBoxEv(pullRates, rarityValues, etbPacks) : null;
 
   const primaryRipScore = primaryEv && primaryProduct?.current_price
     ? Math.round((primaryEv.boxEv / primaryProduct.current_price) * 100) / 100
@@ -419,7 +422,7 @@ export default async function SetDetailPage({
                 {hasBoosterBox && secondaryEv && (
                   <div className="space-y-2 pt-3 border-t border-border">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Elite Trainer Box (9 packs)</span>
+                      <span className="text-sm text-muted-foreground">Elite Trainer Box ({etbPacks} packs)</span>
                       {secondaryRipScore !== null && (
                         <span className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium ${getScoreBg(secondaryRipScore)} ${getScoreColor(secondaryRipScore)}`}>
                           {getVerdict(secondaryRipScore)}
@@ -435,7 +438,7 @@ export default async function SetDetailPage({
                       </div>
                       <div>
                         <InfoTip label={<span className="text-xs text-muted-foreground">ETB EV</span>} side="bottom">
-                          Expected value of all cards pulled from 9 packs, calculated from pull rates and average card values per rarity.
+                          Expected value of all cards pulled from {etbPacks} packs, calculated from pull rates and average card values per rarity.
                         </InfoTip>
                         <p className="font-mono font-semibold">{formatPrice(secondaryEv.boxEv)}</p>
                       </div>
