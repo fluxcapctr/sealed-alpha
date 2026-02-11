@@ -227,6 +227,18 @@ SET_SCORES = {
         "chase_card": "Charizard & Blastoise",
         "notes": "Hailed as one of the best sets of the era due to the return of Team Rocket and a Chase Mewtwo, heavily relying on nostalgia.",
     },
+    "White Flare": {
+        "grade": "B",
+        "chase": 8, "art": 7, "nostalgia": 7, "fun": 7, "value": 5, "depth": 6,
+        "chase_card": "Mega Reshiram EX",
+        "notes": "Strong Gen 5 throwback with great art, but split nature and reliance on Unova nostalgia keeps it just below S-Tier.",
+    },
+    "Black Bolt": {
+        "grade": "B",
+        "chase": 8, "art": 7, "nostalgia": 7, "fun": 7, "value": 5, "depth": 6,
+        "chase_card": "Mega Zekrom EX",
+        "notes": "Strong Gen 5 throwback with great art, but split nature and reliance on Unova nostalgia keeps it just below S-Tier.",
+    },
 
     # ========================================================================
     # MEGA EVOLUTION ERA (2026)
@@ -248,18 +260,6 @@ SET_SCORES = {
         "chase": 7, "art": 7, "nostalgia": 6, "fun": 7, "value": 5, "depth": 7,
         "chase_card": "Mega Lucario EX",
         "notes": "Features a crazy lineup of Pikachu, Mewtwo, and Gengar — just having these three ensures its success.",
-    },
-    "White Flare": {
-        "grade": "B",
-        "chase": 8, "art": 7, "nostalgia": 7, "fun": 7, "value": 5, "depth": 6,
-        "chase_card": "Mega Reshiram EX",
-        "notes": "Strong Gen 5 throwback with great art, but split nature and reliance on Unova nostalgia keeps it just below S-Tier.",
-    },
-    "Black Bolt": {
-        "grade": "B",
-        "chase": 8, "art": 7, "nostalgia": 7, "fun": 7, "value": 5, "depth": 6,
-        "chase_card": "Mega Zekrom EX",
-        "notes": "Strong Gen 5 throwback with great art, but split nature and reliance on Unova nostalgia keeps it just below S-Tier.",
     },
 
     # ========================================================================
@@ -297,7 +297,7 @@ SET_SCORES = {
     },
     "Shining Fates": {
         "grade": "A",
-        "chase": 9, "art": 8, "nostalgia": 6, "fun": 8, "value": 8, "depth": 8,
+        "chase": 7, "art": 5, "nostalgia": 6, "fun": 7, "value": 8, "depth": 6,
         "chase_card": "Charizard VMAX (Shiny)",
         "notes": "Features a Shiny Charizard VMAX but otherwise filled with forgettable Gen 8 shiny Pokemon; printed heavily.",
     },
@@ -415,7 +415,7 @@ SET_SCORES = {
     },
     "Dragon Majesty": {
         "grade": "B",
-        "chase": 8, "art": 7, "nostalgia": 7, "fun": 7, "value": 8, "depth": 6,
+        "chase": 6, "art": 5, "nostalgia": 7, "fun": 7, "value": 8, "depth": 5,
         "chase_card": "Charizard GX",
         "notes": "Mini set with concentrated dragon value. Charizard GX + scarcity = winner.",
     },
@@ -479,7 +479,7 @@ SET_SCORES = {
     },
     "Furious Fists": {
         "grade": "C",
-        "chase": 5, "art": 5, "nostalgia": 5, "fun": 5, "value": 7, "depth": 4,
+        "chase": 5, "art": 6, "nostalgia": 5, "fun": 5, "value": 7, "depth": 4,
         "chase_card": "Mega Lucario EX (Full Art)",
         "notes": "Unforgiving with terrible pull rates (sometimes 1 Ultra Rare per box); largely a skippable set.",
     },
@@ -539,9 +539,15 @@ SET_SCORES = {
     },
     "Evolutions": {
         "grade": "S",
-        "chase": 9, "art": 7, "nostalgia": 10, "fun": 8, "value": 9, "depth": 7,
+        "chase": 8, "art": 7, "nostalgia": 10, "fun": 8, "value": 7, "depth": 7,
         "chase_card": "Charizard (Holo)",
         "notes": "Heavily printed and initially mocked, but now appreciated for being a near-direct reprint of the original Base Set.",
+    },
+    "Double Crisis": {
+        "grade": "C",
+        "chase": 8, "art": 7, "nostalgia": 5, "fun": 4, "value": 3, "depth": 3,
+        "chase_card": "Team Magma's Groudon EX",
+        "notes": "A niche 34-card mini set focused on Team Magma and Team Aqua. Small card pool and no major chase cards limit its appeal.",
     },
 }
 
@@ -559,7 +565,6 @@ SKIP_NAMES = {
     "crown zenith galarian gallery",
     "celebrations classic collection",
     "hidden fates shiny vault",
-    "double crisis",
     "detective pikachu",
 }
 
