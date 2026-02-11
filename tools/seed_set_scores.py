@@ -181,7 +181,7 @@ SET_SCORES = {
     },
     "Temporal Forces": {
         "grade": "B",
-        "chase": 7, "art": 7, "nostalgia": 4, "fun": 7, "value": 5, "depth": 7,
+        "chase": 7, "art": 6, "nostalgia": 4, "fun": 7, "value": 5, "depth": 6,
         "chase_card": "Walking Wake ex SIR",
         "notes": "A picture perfect Gen 9 set with great art (Raging Bolt, Walking Wake) but suffers from having no top chase the market wants.",
     },
@@ -193,7 +193,7 @@ SET_SCORES = {
     },
     "Shrouded Fable": {
         "grade": "C",
-        "chase": 4, "art": 5, "nostalgia": 3, "fun": 6, "value": 5, "depth": 4,
+        "chase": 6, "art": 6, "nostalgia": 3, "fun": 6, "value": 5, "depth": 4,
         "chase_card": "Pecharunt ex SIR",
         "notes": "Widely regarded as one of the worst sets of the era; a dark Halloween-style set with no real chase cards.",
     },
@@ -223,7 +223,7 @@ SET_SCORES = {
     },
     "Destined Rivals": {
         "grade": "S",
-        "chase": 10, "art": 9, "nostalgia": 10, "fun": 8, "value": 6, "depth": 9,
+        "chase": 9, "art": 9, "nostalgia": 10, "fun": 8, "value": 6, "depth": 9,
         "chase_card": "Charizard & Blastoise",
         "notes": "Hailed as one of the best sets of the era due to the return of Team Rocket and a Chase Mewtwo, heavily relying on nostalgia.",
     },
@@ -273,7 +273,7 @@ SET_SCORES = {
     },
     "Rebel Clash": {
         "grade": "C",
-        "chase": 5, "art": 5, "nostalgia": 3, "fun": 5, "value": 5, "depth": 4,
+        "chase": 5, "art": 5, "nostalgia": 3, "fun": 5, "value": 5, "depth": 3,
         "chase_card": "Dragapult VMAX",
         "notes": "Often called Rebel Trash. Universally disliked with almost no redeeming chase cards other than a Boss's Orders Full Art.",
     },
@@ -285,7 +285,7 @@ SET_SCORES = {
     },
     "Vivid Voltage": {
         "grade": "A",
-        "chase": 9, "art": 7, "nostalgia": 7, "fun": 8, "value": 7, "depth": 7,
+        "chase": 8, "art": 6, "nostalgia": 7, "fun": 8, "value": 7, "depth": 5,
         "chase_card": "Pikachu VMAX (Rainbow / Fat Pikachu)",
         "notes": "Famous for the Chonkachu (Rainbow Pikachu VMAX), but the rest (Amazing Rares) has failed to hold long-term interest.",
     },
@@ -297,7 +297,7 @@ SET_SCORES = {
     },
     "Shining Fates": {
         "grade": "A",
-        "chase": 7, "art": 5, "nostalgia": 6, "fun": 7, "value": 8, "depth": 6,
+        "chase": 7, "art": 5, "nostalgia": 6, "fun": 7, "value": 8, "depth": 5,
         "chase_card": "Charizard VMAX (Shiny)",
         "notes": "Features a Shiny Charizard VMAX but otherwise filled with forgettable Gen 8 shiny Pokemon; printed heavily.",
     },
@@ -321,13 +321,13 @@ SET_SCORES = {
     },
     "Fusion Strike": {
         "grade": "C",
-        "chase": 7, "art": 7, "nostalgia": 5, "fun": 4, "value": 4, "depth": 5,
+        "chase": 8, "art": 8, "nostalgia": 5, "fun": 4, "value": 4, "depth": 5,
         "chase_card": "Gengar VMAX (Alt Art)",
         "notes": "Initially disliked for bad pull rates, but now respected for its stacked top 5 chase cards — Gengar VMAX and Espeon VMAX.",
     },
     "Brilliant Stars": {
         "grade": "A",
-        "chase": 9, "art": 8, "nostalgia": 7, "fun": 7, "value": 7, "depth": 8,
+        "chase": 8, "art": 8, "nostalgia": 7, "fun": 7, "value": 7, "depth": 8,
         "chase_card": "Charizard VSTAR (Rainbow Secret)",
         "notes": "Changed the game by introducing the Trainer Gallery, making pull rates much better; headlined by a Charizard Alt Art.",
     },
@@ -351,7 +351,7 @@ SET_SCORES = {
     },
     "Crown Zenith": {
         "grade": "S",
-        "chase": 9, "art": 9, "nostalgia": 7, "fun": 8, "value": 8, "depth": 9,
+        "chase": 9, "art": 9, "nostalgia": 6, "fun": 8, "value": 8, "depth": 9,
         "chase_card": "Giratina VSTAR (Gold)",
         "notes": "The best fun set to open, with the most art we've ever gotten, excellent pull rates, and the Galarian Gallery subset.",
     },
