@@ -19,6 +19,34 @@ const SITE_URL = "https://sealedalpha.com";
 const SENDER =
   process.env.DRIP_SENDER_EMAIL ?? "onboarding@resend.dev";
 
+// --- Simple in-memory rate limiter ---
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+const RATE_LIMIT_MAX = 5; // 5 requests per minute per IP
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+
+  entry.count++;
+  return entry.count > RATE_LIMIT_MAX;
+}
+
+// Clean up stale entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of rateLimitMap) {
+    if (now > val.resetAt) rateLimitMap.delete(key);
+  }
+}, 300_000);
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function welcomeEmailHtml(unsubscribeUrl: string): string {
   return `
     <html>
@@ -57,10 +85,36 @@ function welcomeEmailHtml(unsubscribeUrl: string): string {
 
 export async function POST(request: Request) {
   try {
+    // Rate limit by IP
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      request.headers.get("x-real-ip") ??
+      "unknown";
+
+    if (isRateLimited(ip)) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 }
+      );
+    }
+
     const { email } = await request.json();
 
-    if (!email) {
-      return NextResponse.json({ error: "Email required" }, { status: 400 });
+    if (!email || typeof email !== "string" || !EMAIL_REGEX.test(email)) {
+      return NextResponse.json({ error: "Valid email required" }, { status: 400 });
+    }
+
+    // --- Check if already subscribed (skip duplicate sends) ---
+    if (supabaseAdmin) {
+      const { data: existing } = await supabaseAdmin
+        .from("drip_subscribers")
+        .select("id, current_step")
+        .eq("email", email)
+        .single();
+
+      if (existing && existing.current_step >= 1) {
+        return NextResponse.json({ success: true, already_subscribed: true });
+      }
     }
 
     // --- Insert drip subscriber ---

@@ -104,11 +104,11 @@ def render_template(step: int, config: Config, unsubscribe_url: str) -> str:
         body = f"""
         <h1 style="font-size: 22px; color: #f5f5f5; margin-bottom: 16px;">Welcome to Sealed Alpha!</h1>
         <p style="color: #a3a3a3; line-height: 1.7; font-size: 15px;">
-            You now have access to the most comprehensive Pokemon TCG sealed product tracker on the market.
+            You now have access to the most comprehensive Pokemon TCG sealed product analysis on the market.
         </p>
         <p style="color: #a3a3a3; line-height: 1.7; font-size: 15px;">Here's what you can do right now:</p>
         <ul style="color: #a3a3a3; line-height: 2; font-size: 15px; padding-left: 20px;">
-            <li><strong style="color: #e5e5e5;">Rip Scores</strong> — See the expected value of ripping any booster box</li>
+            <li><strong style="color: #e5e5e5;">Rip Scores</strong> — See the expected value of ripping any modern booster box</li>
             <li><strong style="color: #e5e5e5;">Supply Tracking</strong> — Watch inventory deplete in real time</li>
             <li><strong style="color: #e5e5e5;">Set Grades</strong> — Our investibility scores rank every set S through F</li>
             <li><strong style="color: #e5e5e5;">Price History</strong> — 2+ years of market data across 800+ products</li>
@@ -197,7 +197,7 @@ def render_template(step: int, config: Config, unsubscribe_url: str) -> str:
             As a Sealed Alpha user, you already have the best data on which sets to invest in. Now here's how to get them at the best price.
         </p>
         <p style="color: #a3a3a3; line-height: 1.7; font-size: 15px;">
-            <strong style="color: #f59e0b;">Kitakami Cards</strong> offers wholesale pricing on Pokemon TCG sealed product — shipped directly to you.
+            <strong style="color: #f59e0b;">Kitakami Cards</strong> offers wholesale pricing on Japanese Pokemon TCG sealed product — shipped directly to you.
         </p>
         <p style="color: #a3a3a3; line-height: 1.7; font-size: 15px;">
             No middlemen. No inflated marketplace fees. Just distributor-level pricing passed on to you.

@@ -1,0 +1,40 @@
+name: Daily Pipeline
+
+on:
+  schedule:
+    # Run at 8 AM UTC (3 AM EST / 12 AM PST) every day
+    - cron: "0 8 * * *"
+  workflow_dispatch: # Allow manual triggers
+
+jobs:
+  daily-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run daily pipeline
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          DRIP_SENDER_EMAIL: ${{ secrets.DRIP_SENDER_EMAIL }}
+          WHOLESALE_URL: ${{ secrets.WHOLESALE_URL }}
+        run: python tools/run_daily.py
+
+      - name: Upload run log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-run-log-${{ github.run_number }}
+          path: .tmp/daily_run_log.json
+          retention-days: 30
