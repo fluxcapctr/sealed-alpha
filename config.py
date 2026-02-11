@@ -102,6 +102,14 @@ class Config:
         default_factory=lambda: os.getenv("ALERT_EMAIL", "")
     )
 
+    # Drip Campaign
+    wholesale_url: str = field(
+        default_factory=lambda: os.getenv("WHOLESALE_URL", "https://kitakamicards.com")
+    )
+    drip_sender_email: str = field(
+        default_factory=lambda: os.getenv("DRIP_SENDER_EMAIL", "onboarding@resend.dev")
+    )
+
     def __post_init__(self):
         self.tmp_dir.mkdir(parents=True, exist_ok=True)
 

@@ -417,6 +417,65 @@ export type Database = {
         };
         Relationships: [];
       };
+      drip_subscribers: {
+        Row: {
+          id: string;
+          email: string;
+          signup_date: string;
+          current_step: number;
+          next_send_date: string | null;
+          opted_out: boolean;
+          unsubscribe_token: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          signup_date?: string;
+          current_step?: number;
+          next_send_date?: string | null;
+          opted_out?: boolean;
+          unsubscribe_token?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          signup_date?: string;
+          current_step?: number;
+          next_send_date?: string | null;
+          opted_out?: boolean;
+          unsubscribe_token?: string;
+        };
+        Relationships: [];
+      };
+      drip_log: {
+        Row: {
+          id: string;
+          subscriber_id: string;
+          step: number;
+          template_key: string;
+          sent_at: string;
+          resend_id: string | null;
+        };
+        Insert: {
+          id?: string;
+          subscriber_id: string;
+          step: number;
+          template_key: string;
+          sent_at?: string;
+          resend_id?: string | null;
+        };
+        Update: {
+          id?: string;
+          subscriber_id?: string;
+          step?: number;
+          template_key?: string;
+          sent_at?: string;
+          resend_id?: string | null;
+        };
+        Relationships: [];
+      };
       user_settings: {
         Row: {
           id: string;
@@ -523,5 +582,7 @@ export type PullRate = Database["public"]["Tables"]["pull_rates"]["Row"];
 export type SetRarityValue =
   Database["public"]["Tables"]["set_rarity_values"]["Row"];
 export type SetScore = Database["public"]["Tables"]["set_scores"]["Row"];
+export type DripSubscriber =
+  Database["public"]["Tables"]["drip_subscribers"]["Row"];
 export type ProductAnalytics =
   Database["public"]["Views"]["product_analytics"]["Row"];

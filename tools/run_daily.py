@@ -103,6 +103,7 @@ async def main():
     parser.add_argument("--signals-only", action="store_true")
     parser.add_argument("--skip-onboard", action="store_true", help="Skip new set detection")
     parser.add_argument("--language", default=None, help="Filter by language (en, ja, or all). Default: all products")
+    parser.add_argument("--skip-drip", action="store_true", help="Skip drip email sending")
     args = parser.parse_args()
 
     config = Config()
@@ -146,6 +147,17 @@ async def main():
     # Step 4: Refresh analytics again (with fresh signals)
     logger.info("\n--- Step 4: Final Analytics Refresh ---")
     refresh_analytics(db)
+
+    # Step 5: Send drip emails
+    if not args.prices_only and not args.signals_only and not args.skip_drip:
+        logger.info("\n--- Step 5: Send Drip Emails ---")
+        try:
+            from tools.send_drip_emails import send_drip_emails
+            drip_result = send_drip_emails(db, config, dry_run=False)
+            pipeline_results["drip"] = drip_result
+        except Exception as e:
+            logger.error(f"[DRIP] Failed: {e}")
+            pipeline_results["drip"] = {"error": str(e)}
 
     elapsed = time.time() - start
     pipeline_results["elapsed_seconds"] = round(elapsed, 1)
