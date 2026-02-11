@@ -182,6 +182,10 @@ export default async function AnalyticsPage() {
     "Mega Hyper Rare": ["Mega Hyper Rare"],
     "MEGA_ATTACK_RARE": ["MEGA_ATTACK_RARE"],
     "Signature Trainer": ["Signature Rare"],
+    // XY era
+    "EX": ["Rare Holo EX"],
+    "Full Art": ["Rare Ultra"],
+    "Secret Rare": ["Rare Secret"],
   };
 
   // Compute Box EV for each set that has both pull rates and rarity values
@@ -529,11 +533,12 @@ export default async function AnalyticsPage() {
     (r) => r.daysUntilSellout !== null && r.daysUntilSellout <= 90
   ).length;
 
-  // Pick two random products of the same type from different sets for lifecycle chart
+  // Pick two EN products of the same type from different eras for lifecycle chart
   const lifecycleInitial = (() => {
-    // Group products by type, only those with prices
-    const byProductType = new Map<string, typeof products>();
-    for (const p of products) {
+    const enProducts = products.filter((p) => (p.language ?? "en") === "en");
+    // Group EN products by type, only those with prices
+    const byProductType = new Map<string, typeof enProducts>();
+    for (const p of enProducts) {
       if (!p.current_price || p.current_price <= 0) continue;
       const name = p.product_name.toLowerCase();
       if (name.includes("case") || name.includes("bundle") || name.includes("set of")) continue;
@@ -541,20 +546,29 @@ export default async function AnalyticsPage() {
       arr.push(p);
       byProductType.set(p.product_type, arr);
     }
-    // Prefer Booster Box, then ETB
+    // Prefer Booster Box, then ETB — pick from different eras (series)
     const preferredTypes = ["Booster Box", "Elite Trainer Box"];
     for (const type of preferredTypes) {
       const items = byProductType.get(type);
       if (!items || items.length < 2) continue;
-      // Find two from different sets
-      const setIds = [...new Set(items.map((p) => p.set_id))];
-      if (setIds.length < 2) continue;
-      // Pick two random different sets
-      const i1 = Math.floor(Math.random() * setIds.length);
-      let i2 = Math.floor(Math.random() * (setIds.length - 1));
+      // Group by series to pick from different eras
+      const bySeries = new Map<string, typeof items>();
+      for (const p of items) {
+        const series = p.series ?? "Unknown";
+        const arr = bySeries.get(series) ?? [];
+        arr.push(p);
+        bySeries.set(series, arr);
+      }
+      const seriesKeys = [...bySeries.keys()];
+      if (seriesKeys.length < 2) continue;
+      // Pick two random different eras
+      const i1 = Math.floor(Math.random() * seriesKeys.length);
+      let i2 = Math.floor(Math.random() * (seriesKeys.length - 1));
       if (i2 >= i1) i2++;
-      const p1 = items.find((p) => p.set_id === setIds[i1]);
-      const p2 = items.find((p) => p.set_id === setIds[i2]);
+      const era1 = bySeries.get(seriesKeys[i1])!;
+      const era2 = bySeries.get(seriesKeys[i2])!;
+      const p1 = era1[Math.floor(Math.random() * era1.length)];
+      const p2 = era2[Math.floor(Math.random() * era2.length)];
       if (p1 && p2) {
         return {
           slot1: { set_id: p1.set_id, product_id: p1.product_id },
@@ -774,59 +788,6 @@ export default async function AnalyticsPage() {
         </Card>
       </div>
 
-      {/* Price by Product Type */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">
-            Average Price by Product Type
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product Type</TableHead>
-                <TableHead className="text-right">Count</TableHead>
-                <TableHead className="text-right">Avg Price</TableHead>
-                <TableHead className="text-right">Min</TableHead>
-                <TableHead className="text-right">Max</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {typeStats.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="text-center text-muted-foreground"
-                  >
-                    No data yet
-                  </TableCell>
-                </TableRow>
-              ) : (
-                typeStats.map((t) => (
-                  <TableRow key={t.type}>
-                    <TableCell className="font-medium">{t.type}</TableCell>
-                    <TableCell className="text-right">{t.count}</TableCell>
-                    <TableCell className="text-right font-mono">
-                      {formatPrice(t.avgPrice)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {formatPrice(
-                        t.prices.length > 0 ? Math.min(...t.prices) : null
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {formatPrice(
-                        t.prices.length > 0 ? Math.max(...t.prices) : null
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
     </div>
   );
 }

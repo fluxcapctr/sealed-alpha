@@ -53,6 +53,10 @@ const RARITY_ALIASES: Record<string, string[]> = {
   "Mega Hyper Rare": ["Mega Hyper Rare"],
   "MEGA_ATTACK_RARE": ["MEGA_ATTACK_RARE"],
   "Signature Trainer": ["Signature Rare"],
+  // XY era
+  "EX": ["Rare Holo EX"],
+  "Full Art": ["Rare Ultra"],
+  "Secret Rare": ["Rare Secret"],
 };
 
 function getScoreColor(score: number): string {

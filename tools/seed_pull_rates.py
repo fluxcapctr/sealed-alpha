@@ -311,6 +311,79 @@ SWSH_PULL_RATES: dict[str, list[tuple[str, float, int | None]]] = {
     ],
 }
 
+XY_PULL_RATES: dict[str, list[tuple[str, float, int | None]]] = {
+    "XY": [
+        ("EX", 9, None),
+        ("Full Art", 18, None),
+        ("Secret Rare", 36, None),
+    ],
+    "Flashfire": [
+        ("EX", 9, None),
+        ("Full Art", 18, None),
+        ("Secret Rare", 36, None),
+        ("Full Art Trainer", 72, None),
+    ],
+    "Furious Fists": [
+        ("EX", 9, None),
+        ("Full Art", 18, None),
+        ("Secret Rare", 36, None),
+        ("Full Art Trainer", 72, None),
+    ],
+    "Phantom Forces": [
+        ("EX", 9, None),
+        ("Full Art", 18, None),
+        ("Secret Rare", 36, None),
+        ("Full Art Trainer", 72, None),
+    ],
+    "Primal Clash": [
+        ("EX", 9, None),
+        ("Full Art", 9, None),
+        ("Secret Rare", 12, None),
+        ("Full Art Trainer", 72, None),
+    ],
+    "Double Crisis": [
+        ("EX", 5, None),
+    ],
+    "Roaring Skies": [
+        ("EX", 9, None),
+        ("Full Art", 9, None),
+        ("Secret Rare", 12, None),
+        ("Full Art Trainer", 72, None),
+    ],
+    "Ancient Origins": [
+        ("EX", 9, None),
+        ("Full Art", 9, None),
+        ("Secret Rare", 12, None),
+        ("Full Art Trainer", 72, None),
+    ],
+    "BREAKthrough": [
+        ("EX", 9, None),
+        ("Full Art", 9, None),
+        ("Secret Rare", 12, None),
+        ("Full Art Trainer", 72, None),
+    ],
+    "BREAKpoint": [
+        ("EX", 8, None),
+        ("Full Art", 9, None),
+        ("Secret Rare", 12, None),
+        ("Full Art Trainer", 72, None),
+    ],
+    "Generations": [
+        ("EX", 8, None),
+        ("Full Art", 9, None),
+        ("Full Art Trainer", 12, None),
+    ],
+    "Fates Collide": [
+        ("EX", 8, None),
+    ],
+    "Steam Siege": [
+        ("EX", 8, None),
+    ],
+    "Evolutions": [
+        ("EX", 7, None),
+    ],
+}
+
 SM_PULL_RATES: dict[str, list[tuple[str, float, int | None]]] = {
     "Sun & Moon": [
         ("GX", 9, 11),
@@ -436,7 +509,7 @@ SM_PULL_RATES: dict[str, list[tuple[str, float, int | None]]] = {
 async def main():
     parser = argparse.ArgumentParser(description="Seed pull rate data")
     parser.add_argument("--dry-run", action="store_true", help="Print without inserting")
-    parser.add_argument("--era", choices=["sv", "swsh", "sm"], help="Only seed one era")
+    parser.add_argument("--era", choices=["sv", "swsh", "sm", "xy"], help="Only seed one era")
     args = parser.parse_args()
 
     config = Config()
@@ -450,6 +523,8 @@ async def main():
         all_data.update(SWSH_PULL_RATES)
     if not args.era or args.era == "sm":
         all_data.update(SM_PULL_RATES)
+    if not args.era or args.era == "xy":
+        all_data.update(XY_PULL_RATES)
 
     # Fetch all sets from DB for name → id mapping
     sets = db.client.table("sets").select("id, name").execute().data

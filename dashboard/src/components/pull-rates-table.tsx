@@ -17,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-type Era = "sv" | "swsh" | "sm";
+type Era = "sv" | "swsh" | "sm" | "xy";
 
 export type PullRateRow = {
   setName: string;
@@ -67,6 +67,12 @@ const ERA_COLUMNS: Record<Era, string[]> = {
     "Shiny Rare",
     "Shiny GX",
   ],
+  xy: [
+    "EX",
+    "Full Art",
+    "Full Art Trainer",
+    "Secret Rare",
+  ],
 };
 
 // Short column labels for tighter display
@@ -100,18 +106,23 @@ const SHORT_LABELS: Record<string, string> = {
   "Foil Energy": "Foil E",
   "Amazing Rare": "Amaze",
   "Rare Holo": "Holo",
+  "EX": "EX",
+  "Full Art": "FA",
+  "Secret Rare": "SR",
 };
 
 const ERA_LABELS: Record<Era, string> = {
   sv: "Scarlet & Violet",
   swsh: "Sword & Shield",
   sm: "Sun & Moon",
+  xy: "XY",
 };
 
 const ERA_SERIES: Record<Era, string[]> = {
   sv: ["Scarlet & Violet"],
   swsh: ["Sword & Shield"],
   sm: ["Sun & Moon"],
+  xy: ["XY"],
 };
 
 function getRateColor(rate: number): string {
@@ -160,7 +171,7 @@ export function PullRatesTable({ data }: { data: PullRateRow[] }) {
             </CardDescription>
           </div>
           <div className="flex gap-1 rounded-lg border border-border p-0.5">
-            {(["sv", "swsh", "sm"] as Era[]).map((e) => (
+            {(["sv", "swsh", "sm", "xy"] as Era[]).map((e) => (
               <button
                 key={e}
                 onClick={() => setEra(e)}
