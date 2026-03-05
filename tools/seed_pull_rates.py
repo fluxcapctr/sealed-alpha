@@ -168,10 +168,8 @@ SV_PULL_RATES: dict[str, list[tuple[str, float, int | None]]] = {
     "Ascended Heroes": [
         ("Double Rare", 5, None),
         ("Ultra Rare", 21, None),
-        ("Mega Attack Rare", 29, None),
         ("Illustration Rare", 9, None),
         ("Special Illustration Rare", 70, None),
-        ("Mega Hyper Rare", 540, None),
     ],
 }
 
