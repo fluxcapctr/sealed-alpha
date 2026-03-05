@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { HoverGlowButton } from "@/components/hover-glow-button";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -83,12 +84,10 @@ export default function SignupPage() {
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="h-11 w-full rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 sm:h-auto sm:py-2"
-          >
-            {loading ? "Getting access..." : "Get Free Access"}
+          <button type="submit" disabled={loading} className="w-full disabled:opacity-50">
+            <HoverGlowButton variant="primary" className="w-full py-3">
+              {loading ? "Getting access..." : "Get Free Access"}
+            </HoverGlowButton>
           </button>
         </form>
 
