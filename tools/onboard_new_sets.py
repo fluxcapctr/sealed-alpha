@@ -1,9 +1,9 @@
 """
 Detect and fully onboard new Pokemon TCG sets into the database.
 
-Checks the Pokemon TCG API for sets not yet in our database, then runs
-the full onboarding pipeline: seed set, discover products, compute set
-value, fetch logo, and set top card art.
+Uses PokeDATA.io as the primary source for detecting new sets (pokemontcg.io
+is unreliable/down). Then runs the full onboarding pipeline: seed set,
+discover products, compute set value, fetch logo, and set top card art.
 
 Usage:
     python tools/onboard_new_sets.py
@@ -14,8 +14,10 @@ Usage:
 import argparse
 import asyncio
 import logging
+import re
 import sys
 import time
+from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -24,13 +26,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import httpx
 from config import Config
 from db import Database
+from models import PokemonSet
 
 # Reuse existing tool functions
-from seed_sets import (
-    fetch_sets_from_pokemon_api,
-    filter_sets_by_year,
-    api_set_to_model,
-)
+from seed_sets import estimate_print_status, normalize_date
 from seed_products import seed_products_for_set
 from scrape_set_values import (
     fetch_pokedata_sets,
@@ -53,31 +52,119 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
 )
 
+# PokeDATA.io series names that map to our eras
+POKEDATA_SERIES_SKIP = {
+    "Base", "Gym", "Neo", "e-Card", "EX", "Diamond & Pearl",
+    "Platinum", "HeartGold SoulSilver", "Black & White",
+}
 
-async def detect_new_sets(config: Config, db: Database) -> list[dict]:
-    """Compare Pokemon TCG API sets against DB and return those not yet seeded."""
-    # Pokemon TCG API can be slow — retry up to 3 times
-    api_sets = None
-    for attempt in range(3):
-        try:
-            api_sets = await fetch_sets_from_pokemon_api(config)
-            break
-        except Exception as e:
-            logger.warning(f"Pokemon TCG API attempt {attempt + 1}/3 failed: {e}")
-            if attempt < 2:
-                await asyncio.sleep(5)
+# Subsets / promos / name variants to skip on PokeDATA.io
+# Includes promos, McDonald's, Trick or Trade, and sets whose PokeDATA.io
+# name differs from our DB name (e.g., "XY Base" vs "XY")
+POKEDATA_NAME_SKIP = {
+    # Promos
+    "Scarlet & Violet Promos", "Mega Evolution Promos",
+    "Sword & Shield Promos", "Sun & Moon Promos", "XY Promos",
+    "Sword & Shield Promo", "Sun & Moon Black Star Promo",
+    "Alternate Art Promos",
+    # McDonald's / misc
+    "Mcdonald's Dragon Discovery", "McDonald's Promos 2023",
+    "McDonald's Promos 2024", "McDonald's Promos 2022",
+    "McDonald's Promos 2019", "McDonald's Promos 2018",
+    "McDonald's Promos 2017", "McDonald's Promos 2016",
+    "McDonald's Promos 2015", "McDonald's Promos 2014",
+    "Mcdonald's 25th Anniversary", "Mcdonald's Promos 2022",
+    "Trick or Trade 2024", "Trick or Trade 2023", "Trick or Trade 2022",
+    # Sub-collections
+    "Generations Radiant Collection", "Trading Card Game Classic",
+    # Name variants already in DB under different names
+    "XY Base",             # DB: "XY"
+    "Scarlet & Violet Base",  # DB: "Scarlet & Violet"
+    "Pokemon Card 151",    # DB: "151"
+    "Pokemon GO",          # DB: "Pokemon GO" (may already match — keep just in case)
+}
 
-    if api_sets is None:
-        logger.error("Pokemon TCG API unavailable after 3 attempts - skipping")
-        return []
 
-    filtered = filter_sets_by_year(api_sets, config.min_set_year)
+def slugify_code(name: str) -> str:
+    """Generate a URL-friendly code from a set name."""
+    slug = name.lower().strip()
+    slug = re.sub(r"[^a-z0-9]+", "-", slug)
+    slug = slug.strip("-")
+    return slug
 
-    # Get existing set codes from DB
+
+def parse_pokedata_date(date_str: str) -> str:
+    """Parse PokeDATA.io date format to ISO date string.
+    Input: 'Fri, 30 Jan 2026 00:00:00 GMT'
+    Output: '2026-01-30'
+    """
+    if not date_str:
+        return ""
+    try:
+        from datetime import datetime
+        dt = datetime.strptime(date_str, "%a, %d %b %Y %H:%M:%S %Z")
+        return dt.strftime("%Y-%m-%d")
+    except (ValueError, TypeError):
+        return ""
+
+
+def pokedata_set_to_model(pd_set: dict, code: str) -> PokemonSet:
+    """Convert a PokeDATA.io set object to our PokemonSet model."""
+    release_raw = parse_pokedata_date(pd_set.get("release_date", ""))
+    in_print, in_rotation = estimate_print_status(release_raw) if release_raw else (True, True)
+
+    return PokemonSet(
+        name=pd_set.get("name", ""),
+        code=code,
+        series=pd_set.get("series", ""),
+        release_date=release_raw or None,
+        set_url=f"https://www.tcgplayer.com/search/pokemon/{code}",
+        image_url=pd_set.get("img_url", ""),
+        is_in_print=in_print,
+        is_in_rotation=in_rotation,
+    )
+
+
+async def detect_new_sets_pokedata(config: Config, db: Database) -> list[dict]:
+    """Detect new sets using PokeDATA.io (primary, fast and reliable)."""
+    async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+        r = await client.get("https://pokedata.io/api/sets")
+        if r.status_code != 200:
+            logger.error(f"PokeDATA.io API returned {r.status_code}")
+            return []
+        all_sets = r.json()
+
+    # Filter to English, modern eras only
+    candidates = []
+    for s in all_sets:
+        if s.get("language") != "ENGLISH":
+            continue
+        series = s.get("series", "")
+        if series in POKEDATA_SERIES_SKIP:
+            continue
+        name = s.get("name", "")
+        if name in POKEDATA_NAME_SKIP:
+            continue
+
+        # Filter by release year
+        release_str = parse_pokedata_date(s.get("release_date", ""))
+        if release_str:
+            try:
+                year = int(release_str[:4])
+                if year < config.min_set_year:
+                    continue
+            except ValueError:
+                continue
+        else:
+            continue
+
+        candidates.append(s)
+
+    # Compare against DB by name (more reliable than code matching)
     db_sets = db.get_sets()
-    existing_codes = {s["code"] for s in db_sets if s.get("code")}
+    existing_names = {s["name"].lower() for s in db_sets if s.get("name")}
 
-    new_sets = [s for s in filtered if s.get("id", "") not in existing_codes]
+    new_sets = [s for s in candidates if s.get("name", "").lower() not in existing_names]
     return new_sets
 
 
@@ -104,6 +191,11 @@ async def onboard_set_value(
     total_value = 0.0
     total_cards = 0
 
+    price_by_card: dict[int, float] = {}
+    for stat in stats:
+        if stat.get("source") == PRICE_SOURCE and stat.get("avg") is not None:
+            price_by_card[stat["card_id"]] = stat["avg"]
+
     for c in cards:
         num = c.get("num", "")
         if not num or num in seen:
@@ -113,21 +205,6 @@ async def onboard_set_value(
             continue
         seen.add(num)
         total_cards += 1
-
-    price_by_card: dict[int, float] = {}
-    for stat in stats:
-        if stat.get("source") == PRICE_SOURCE and stat.get("avg") is not None:
-            price_by_card[stat["card_id"]] = stat["avg"]
-
-    seen2: set[str] = set()
-    for c in cards:
-        num = c.get("num", "")
-        if not num or num in seen2:
-            continue
-        name = c.get("name", "")
-        if "reverse" in name.lower():
-            continue
-        seen2.add(num)
         total_value += price_by_card.get(c["id"], 0)
 
     if total_value > 0:
@@ -179,15 +256,18 @@ async def onboard_set_top_card(
 
 
 async def onboard_single_set(
-    api_set: dict,
+    pd_set: dict,
     config: Config,
     db: Database,
     pokedata_sets: list[dict],
     dry_run: bool = False,
 ) -> dict:
     """Run the full onboarding pipeline for a single new set."""
-    name = api_set.get("name", "?")
-    code = api_set.get("id", "?")
+    name = pd_set.get("name", "?")
+    # Use PokeDATA.io code if available, otherwise generate a slug
+    code = pd_set.get("code") or slugify_code(name)
+    pd_id = pd_set.get("id")
+
     result = {
         "name": name,
         "code": code,
@@ -198,7 +278,7 @@ async def onboard_single_set(
         "top_card": False,
     }
 
-    logger.info(f"Onboarding: {name} ({code})")
+    logger.info(f"Onboarding: {name} (code={code}, pokedata_id={pd_id})")
 
     if dry_run:
         logger.info(f"  [DRY RUN] Would onboard {name}")
@@ -206,7 +286,7 @@ async def onboard_single_set(
 
     # Step 1: Seed the set
     try:
-        model = api_set_to_model(api_set)
+        model = pokedata_set_to_model(pd_set, code)
         db.upsert_set(model)
         result["seeded"] = True
         logger.info(f"  Seeded set: {name}")
@@ -216,7 +296,7 @@ async def onboard_single_set(
 
     # Get the newly-created set from DB
     db_sets = db.get_sets()
-    set_data = next((s for s in db_sets if s["code"] == code), None)
+    set_data = next((s for s in db_sets if s["name"] == name), None)
     if not set_data:
         logger.error(f"  Could not find set in DB after seeding")
         return result
@@ -244,11 +324,8 @@ async def onboard_single_set(
         logger.warning(f"  Logo: no Pokellector mapping for '{name}'")
 
     # Step 4: Set value + top card (PokeDATA.io)
-    mapping = build_set_mapping(db_sets, pokedata_sets)
-    pd_id = mapping.get(set_data["id"])
-
     if pd_id and name not in SKIP_SUBSETS:
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
             # Set value
             try:
                 result["value"] = await onboard_set_value(
@@ -269,7 +346,7 @@ async def onboard_single_set(
                     logger.error(f"  Failed to set top card: {e}")
     else:
         if not pd_id:
-            logger.warning(f"  No PokeDATA.io mapping — skipping value + top card")
+            logger.warning(f"  No PokeDATA.io ID — skipping value + top card")
         if name in SKIP_SUBSETS:
             logger.info(f"  Sub-set — skipping value computation")
 
@@ -288,28 +365,35 @@ async def onboard_new_sets(
     """
     start = time.time()
 
-    # Detect new sets
+    # Detect new sets via PokeDATA.io
     if force:
-        api_sets = await fetch_sets_from_pokemon_api(config)
-        new_api_sets = filter_sets_by_year(api_sets, config.min_set_year)
-        logger.info(f"Force mode: re-checking all {len(new_api_sets)} sets")
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+            r = await client.get("https://pokedata.io/api/sets")
+            all_pd_sets = r.json()
+        new_sets = [
+            s for s in all_pd_sets
+            if s.get("language") == "ENGLISH"
+            and s.get("series", "") not in POKEDATA_SERIES_SKIP
+            and s.get("name", "") not in POKEDATA_NAME_SKIP
+        ]
+        logger.info(f"Force mode: re-checking all {len(new_sets)} sets")
     else:
-        new_api_sets = await detect_new_sets(config, db)
+        new_sets = await detect_new_sets_pokedata(config, db)
 
-    if not new_api_sets:
+    if not new_sets:
         logger.info("No new sets detected")
         return {"new_sets": 0, "elapsed": 0}
 
-    logger.info(f"Found {len(new_api_sets)} new set(s) to onboard")
+    logger.info(f"Found {len(new_sets)} new set(s) to onboard")
 
-    # Pre-fetch PokeDATA.io sets for mapping
-    async with httpx.AsyncClient(timeout=30) as client:
+    # PokeDATA.io sets are already fetched — pass them for mapping
+    async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
         pokedata_sets = await fetch_pokedata_sets(client)
 
     results = []
-    for api_set in new_api_sets:
+    for pd_set in new_sets:
         result = await onboard_single_set(
-            api_set, config, db, pokedata_sets, dry_run
+            pd_set, config, db, pokedata_sets, dry_run
         )
         results.append(result)
         await asyncio.sleep(1)  # Rate limit between sets
