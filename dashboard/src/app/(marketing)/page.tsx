@@ -98,6 +98,10 @@ export default async function LandingPage() {
         </div>
 
         <p className="mt-8 text-xs text-muted-foreground sm:mt-12">
+          <Link href="/about" className="hover:underline">
+            About
+          </Link>
+          {" · "}
           <Link href="/privacy" className="hover:underline">
             Privacy Policy
           </Link>

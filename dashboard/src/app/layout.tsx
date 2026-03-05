@@ -59,14 +59,6 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
-        <footer className="border-t border-zinc-800 mt-12 py-6 px-4 text-center text-xs text-zinc-500">
-          <p>
-            Sealed Alpha is for informational purposes only and does not
-            constitute financial, investment, or trading advice. Past
-            performance does not guarantee future results. Always do your own
-            research before making purchasing decisions.
-          </p>
-        </footer>
         {GA_ID && (
           <>
             <Script

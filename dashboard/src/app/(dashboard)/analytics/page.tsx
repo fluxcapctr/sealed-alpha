@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { StatCard } from "@/components/stat-card";
 import { formatPrice } from "@/lib/signals";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -26,8 +25,6 @@ import {
 import { SealedPremiumIndex } from "@/components/sealed-premium-index";
 import { PullRatesTable, type PullRateRow } from "@/components/pull-rates-table";
 import { RipScoreCard, type RipScoreRow } from "@/components/rip-score-card";
-import { TrendingUp, Package, Layers } from "lucide-react";
-import { HIDDEN_SUBSETS } from "@/lib/constants";
 import type { ProductAnalytics } from "@/types/database";
 
 export const revalidate = 300;
@@ -328,38 +325,6 @@ export default async function AnalyticsPage() {
   const ripScoreBoxData = buildRipScoreData(boxBySet, 36);
   const ripScoreEtbData = buildRipScoreData(etbBySet, 9);
 
-  // Total master set market cap
-  const totalMasterSetValue = (setsData ?? []).reduce(
-    (sum, s) => sum + (s.total_set_value ?? 0),
-    0
-  );
-  const setsWithValues = (setsData ?? []).filter((s) => s.total_set_value && !HIDDEN_SUBSETS.has(s.name)).length;
-
-  // Stats by product type
-  const byType = new Map<
-    string,
-    { count: number; avgPrice: number; prices: number[] }
-  >();
-  for (const p of products) {
-    const type = p.product_type;
-    const existing = byType.get(type) ?? { count: 0, avgPrice: 0, prices: [] };
-    existing.count++;
-    if (p.current_price !== null) {
-      existing.prices.push(p.current_price);
-    }
-    byType.set(type, existing);
-  }
-  for (const [, stats] of byType) {
-    stats.avgPrice =
-      stats.prices.length > 0
-        ? stats.prices.reduce((a, b) => a + b, 0) / stats.prices.length
-        : 0;
-  }
-
-  const typeStats = Array.from(byType.entries())
-    .map(([type, stats]) => ({ type, ...stats }))
-    .sort((a, b) => b.avgPrice - a.avgPrice);
-
   // Pack premium chart — build per-set product data
   // Find loose pack per set (cheapest standard pack)
   const loosePackBySet = new Map<string, { price: number; name: string }>();
@@ -378,11 +343,15 @@ export default async function AnalyticsPage() {
   }
 
   // Find all eligible sealed products per set
-  function getPackCount(productType: string): number {
+  function getPackCount(productType: string, productName = ""): number {
     if (productType === "Booster Box") return 36;
     if (productType === "Elite Trainer Box") return 9;
-    if (productType === "Booster Bundle") return 6;
     if (productType === "Booster Bundle Case") return 60;
+    if (productType === "Booster Bundle") {
+      // "Display" = case of 10 bundles × 6 packs = 60
+      if (productName.toLowerCase().includes("display")) return 60;
+      return 6;
+    }
     return 0;
   }
 
@@ -438,9 +407,9 @@ export default async function AnalyticsPage() {
         name: p.product_name,
         shortName: shortenName(p.product_name, setInfo.name),
         productType: p.product_type,
-        pricePerPack: Math.round((p.current_price! / getPackCount(p.product_type)) * 100) / 100,
+        pricePerPack: Math.round((p.current_price! / getPackCount(p.product_type, p.product_name)) * 100) / 100,
         totalPrice: p.current_price!,
-        packCount: getPackCount(p.product_type),
+        packCount: getPackCount(p.product_type, p.product_name),
         eraAvgPremium: null, // computed below
         eraAvgPricePerPack: null, // computed below
       })).sort((a, b) => a.pricePerPack - b.pricePerPack),
@@ -591,28 +560,6 @@ export default async function AnalyticsPage() {
         <p className="text-sm text-muted-foreground">
           Market-wide insights and portfolio analysis
         </p>
-      </div>
-
-      {/* Market Overview */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          title="Master Set Market Cap"
-          value={formatPrice(totalMasterSetValue)}
-          subtitle={`across ${setsWithValues} sets`}
-          icon={TrendingUp}
-        />
-        <StatCard
-          title="Products Tracked"
-          value={products.length.toString()}
-          subtitle={`${(allSetsData ?? []).filter((s) => !HIDDEN_SUBSETS.has(s.name)).length} sets`}
-          icon={Package}
-        />
-        <StatCard
-          title="Product Types"
-          value={byType.size.toString()}
-          subtitle={Array.from(byType.keys()).slice(0, 3).join(", ") + (byType.size > 3 ? "..." : "")}
-          icon={Layers}
-        />
       </div>
 
       {/* Lifecycle Comparison Chart */}

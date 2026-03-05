@@ -15,6 +15,23 @@ export default function MarketingLayout({
         className="pointer-events-none z-0"
       />
       <div className="relative z-10">{children}</div>
+      <footer className="relative z-10 border-t border-zinc-800 mt-12 py-6 px-4 text-center text-xs text-zinc-500">
+        <p>
+          Sealed Alpha is for informational purposes only and does not
+          constitute financial, investment, or trading advice. Past
+          performance does not guarantee future results. Always do your own
+          research before making purchasing decisions.
+        </p>
+        <p className="mt-3">
+          Notice wrong data or want to see something added?{" "}
+          <a
+            href="mailto:eric@kitakamicards.com"
+            className="text-zinc-400 underline hover:text-zinc-300"
+          >
+            Drop me a line
+          </a>
+        </p>
+      </footer>
     </div>
   );
 }

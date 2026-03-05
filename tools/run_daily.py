@@ -135,6 +135,16 @@ async def main():
         logger.info("\n--- Step 1: Scrape Prices ---")
         pipeline_results["prices"] = await run_price_scraper(config, db, args.language)
 
+    # Step 1b: Scrape quantities (updates today's snapshots with available_quantity)
+    if not args.signals_only:
+        logger.info("\n--- Step 1b: Scrape Quantities ---")
+        try:
+            from tools.scrape_prices import scrape_quantities_batch
+            pipeline_results["quantities"] = await scrape_quantities_batch(db, config)
+        except Exception as e:
+            logger.error(f"[QUANTITIES] Failed: {e}")
+            pipeline_results["quantities"] = {"error": str(e)}
+
     # Step 2: Refresh analytics (needs fresh price data)
     logger.info("\n--- Step 2: Refresh Analytics ---")
     refresh_analytics(db)

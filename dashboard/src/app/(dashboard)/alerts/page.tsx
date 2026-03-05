@@ -61,15 +61,13 @@ export default async function AlertsPage() {
                 <TableHead>Product</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Message</TableHead>
-                <TableHead className="text-right">Score</TableHead>
-                <TableHead className="text-right">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={4}
                     className="text-center text-muted-foreground"
                   >
                     No alerts yet. Alerts are generated after running the signal
@@ -110,23 +108,6 @@ export default async function AlertsPage() {
                       </TableCell>
                       <TableCell className="text-sm">
                         {alert.message ?? "--"}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
-                        {alert.signal_score !== null
-                          ? alert.signal_score
-                          : "--"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] ${
-                            alert.is_sent
-                              ? "border-green-500/30 text-green-400"
-                              : "border-amber-500/30 text-amber-400"
-                          }`}
-                        >
-                          {alert.is_sent ? "Sent" : "Pending"}
-                        </Badge>
                       </TableCell>
                     </TableRow>
                   );

@@ -257,7 +257,7 @@ SET_SCORES = {
     },
     "Ascended Heroes": {
         "grade": "B",
-        "chase": 7, "art": 7, "nostalgia": 6, "fun": 7, "value": 5, "depth": 7,
+        "chase": 7, "art": 8, "nostalgia": 7, "fun": 7, "value": 5, "depth": 9,
         "chase_card": "Mega Lucario EX",
         "notes": "Features a crazy lineup of Pikachu, Mewtwo, and Gengar — just having these three ensures its success.",
     },

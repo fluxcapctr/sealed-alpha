@@ -24,7 +24,7 @@ export default async function SetsPage({
     .from("sets")
     .select("*")
     .eq("language", lang)
-    .order("release_date", { ascending: false });
+    .order("release_date", { ascending: false, nullsFirst: false });
 
   // Get product counts per set from analytics + set scores
   const [{ data: analytics }, { data: scoresData }] = await Promise.all([
