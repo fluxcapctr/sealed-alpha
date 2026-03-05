@@ -2,14 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
 import Link from "next/link";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -17,39 +14,28 @@ export default function SignupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
-
     setLoading(true);
 
-    const supabase = createClient();
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    try {
+      const res = await fetch("/api/welcome-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
 
-    if (signUpError) {
-      setError(signUpError.message);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Something went wrong");
+        setLoading(false);
+        return;
+      }
+
+      router.push("/overview");
+    } catch {
+      setError("Something went wrong. Please try again.");
       setLoading(false);
-      return;
     }
-
-    // Send welcome email (fire and forget)
-    fetch("/api/welcome-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    }).catch(() => {});
-
-    router.push("/overview");
   };
 
   return (
@@ -66,9 +52,9 @@ export default function SignupPage() {
               priority
             />
           </Link>
-          <h1 className="text-2xl font-bold">Create your account</h1>
+          <h1 className="text-2xl font-bold">Get free access</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Free access to all features
+            Enter your email for full access to all features
           </p>
         </div>
 
@@ -97,56 +83,14 @@ export default function SignupPage() {
             />
           </div>
 
-          <div>
-            <label
-              htmlFor="password"
-              className="mb-1 block text-sm font-medium"
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="h-11 w-full rounded-md border border-border bg-background px-3 text-base outline-none focus:border-primary sm:h-auto sm:py-2 sm:text-sm"
-              placeholder="At least 6 characters"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="confirmPassword"
-              className="mb-1 block text-sm font-medium"
-            >
-              Confirm Password
-            </label>
-            <input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              className="h-11 w-full rounded-md border border-border bg-background px-3 text-base outline-none focus:border-primary sm:h-auto sm:py-2 sm:text-sm"
-            />
-          </div>
-
           <button
             type="submit"
             disabled={loading}
             className="h-11 w-full rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 sm:h-auto sm:py-2"
           >
-            {loading ? "Creating account..." : "Create Account"}
+            {loading ? "Getting access..." : "Get Free Access"}
           </button>
         </form>
-
-        <p className="text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link href="/login" className="text-primary hover:underline">
-            Sign in
-          </Link>
-        </p>
 
         <p className="text-center text-xs text-muted-foreground">
           By signing up, you agree to our{" "}

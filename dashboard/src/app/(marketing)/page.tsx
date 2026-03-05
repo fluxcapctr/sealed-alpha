@@ -48,9 +48,9 @@ export default async function LandingPage() {
               Get Free Access
             </HoverGlowButton>
           </Link>
-          <Link href="/login" className="w-full sm:w-auto">
+          <Link href="/overview" className="w-full sm:w-auto">
             <HoverGlowButton variant="outline" className="w-full sm:w-auto">
-              Sign In
+              Browse Dashboard
             </HoverGlowButton>
           </Link>
         </div>

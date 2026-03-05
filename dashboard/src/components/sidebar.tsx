@@ -13,7 +13,6 @@ import {
   Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { LogoutButton } from "@/components/logout-button";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -76,11 +75,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       {/* Footer */}
-      <div className="flex items-center justify-between border-t border-border px-4 py-3">
+      <div className="border-t border-border px-4 py-3">
         <p className="text-[10px] text-muted-foreground">
           Data from TCGPlayer
         </p>
-        <LogoutButton />
       </div>
     </>
   );
