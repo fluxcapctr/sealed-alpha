@@ -382,7 +382,7 @@ export default async function AnalyticsPage() {
     if (productType === "Booster Box") return 36;
     if (productType === "Elite Trainer Box") return 9;
     if (productType === "Booster Bundle") return 6;
-    if (productType === "Booster Bundle Case") return 36;
+    if (productType === "Booster Bundle Case") return 60;
     return 0;
   }
 
