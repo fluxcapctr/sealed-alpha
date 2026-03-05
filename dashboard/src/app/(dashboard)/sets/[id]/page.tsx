@@ -212,8 +212,8 @@ export default async function SetDetailPage({
   const boosterBox = findStandardProduct("Booster Box");
   const etb = findStandardProduct("Elite Trainer Box");
 
-  // ETB pack count varies by era: SV = 9, SWSH/SM/XY = 8
-  const etbPacks = set.series === "Scarlet & Violet" ? 9 : 8;
+  // ETB pack count varies by era: SV/Mega = 9, SWSH/SM/XY = 8
+  const etbPacks = set.series === "Scarlet & Violet" || set.series === "Mega Evolution" ? 9 : 8;
 
   // Determine flagship product: booster box if available, otherwise ETB
   const hasBoosterBox = boosterBox !== null;
