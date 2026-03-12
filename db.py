@@ -82,19 +82,30 @@ class Database:
         is_active: bool = True,
         language: str | None = None,
     ) -> list[dict]:
-        query = (
-            self.client.table("products")
-            .select("*, sets(name, code, release_date, is_in_print, is_in_rotation)")
-            .eq("is_active", is_active)
-            .order("name")
-        )
-        if set_id:
-            query = query.eq("set_id", set_id)
-        if product_type:
-            query = query.eq("product_type", product_type)
-        if language is not None:
-            query = query.eq("language", language)
-        return query.execute().data
+        # Paginate to avoid Supabase default 1000-row limit
+        all_data: list[dict] = []
+        page_size = 1000
+        offset = 0
+        while True:
+            query = (
+                self.client.table("products")
+                .select("*, sets(name, code, release_date, is_in_print, is_in_rotation)")
+                .eq("is_active", is_active)
+                .order("name")
+                .range(offset, offset + page_size - 1)
+            )
+            if set_id:
+                query = query.eq("set_id", set_id)
+            if product_type:
+                query = query.eq("product_type", product_type)
+            if language is not None:
+                query = query.eq("language", language)
+            data = query.execute().data
+            all_data.extend(data)
+            if len(data) < page_size:
+                break
+            offset += page_size
+        return all_data
 
     def get_product_by_tcgplayer_id(self, tcgplayer_id: int) -> dict | None:
         result = (

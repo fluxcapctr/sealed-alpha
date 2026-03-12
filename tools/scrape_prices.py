@@ -245,40 +245,43 @@ async def scrape_prices_batch(db: Database, config: Config, set_filter: str | No
 
     logger.info(f"Batch scraping prices for {len(sets)} sets ({len(tcg_id_to_product)} products)...")
 
-    search_payload = {
-        "algorithm": "sales_synonym_v2",
-        "from": 0,
-        "size": 50,
-        "filters": {
-            "term": {
-                "productLineName": ["pokemon"],
-                "productTypeName": ["Sealed Products"],
-            },
-            "range": {},
-            "match": {},
-        },
-        "listingSearch": {
+    def make_payload(product_line: str) -> dict:
+        return {
+            "algorithm": "sales_synonym_v2",
+            "from": 0,
+            "size": 50,
             "filters": {
-                "term": {},
+                "term": {
+                    "productLineName": [product_line],
+                    "productTypeName": ["Sealed Products"],
+                },
                 "range": {},
-                "exclude": {"channelExclusion": 0},
-            }
-        },
-        "context": {"cart": {}, "shippingCountry": "US", "userProfile": {}},
-        "settings": {"useFuzzySearch": True, "didYouMean": {}},
-        "sort": {},
-    }
+                "match": {},
+            },
+            "listingSearch": {
+                "filters": {
+                    "term": {},
+                    "range": {},
+                    "exclude": {"channelExclusion": 0},
+                }
+            },
+            "context": {"cart": {}, "shippingCountry": "US", "userProfile": {}},
+            "settings": {"useFuzzySearch": True, "didYouMean": {}},
+            "sort": {},
+        }
 
     async with httpx.AsyncClient(timeout=config.httpx_timeout) as client:
         for i, set_data in enumerate(sets):
             set_name = set_data["name"]
-            logger.info(f"[{i + 1}/{len(sets)}] Fetching prices for set: {set_name}")
+            lang = set_data.get("language", "en")
+            product_line = "pokemon-japan" if lang == "ja" else "pokemon"
+            logger.info(f"[{i + 1}/{len(sets)}] Fetching prices for set: {set_name} ({lang})")
 
             try:
                 resp = await client.post(
                     TCGPLAYER_SEARCH_API,
                     params={"q": set_name, "isList": "false"},
-                    json=search_payload,
+                    json=make_payload(product_line),
                     headers={"User-Agent": config.random_user_agent()},
                 )
 

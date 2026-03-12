@@ -27,35 +27,14 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 
 
 async def run_price_scraper(config: Config, db: Database, language: str | None = None) -> dict:
-    """Run the price scraper for all products due for scraping."""
-    from tools.scrape_prices import scrape_product_price_api
+    """Run the price scraper using batch mode (by set, ~10x faster than per-product)."""
+    from tools.scrape_prices import scrape_prices_batch
 
-    products = db.get_products_needing_scrape()
-    # Filter by language if specified
-    if language and language != "all":
-        products = [p for p in products if p.get("language", "en") == language]
-    logger.info(f"[PRICES] {len(products)} products due for scraping")
-
-    results = {"success": 0, "failed": 0, "skipped": 0}
-
-    for i, product in enumerate(products):
-        try:
-            snapshot = await scrape_product_price_api(product, config)
-            if snapshot:
-                db.insert_price_snapshot(snapshot)
-                results["success"] += 1
-            else:
-                results["skipped"] += 1
-        except Exception as e:
-            results["failed"] += 1
-            logger.error(f"  Price scrape failed for {product['name']}: {e}")
-
-        if i < len(products) - 1:
-            await asyncio.sleep(config.random_delay())
-
+    results = await scrape_prices_batch(db, config)
     logger.info(
         f"[PRICES] Done: {results['success']} success, "
-        f"{results['failed']} failed, {results['skipped']} skipped"
+        f"{results['failed']} failed, {results['skipped']} skipped, "
+        f"{results['sets_processed']} sets processed"
     )
     return results
 
