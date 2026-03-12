@@ -1,7 +1,9 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useState, useRef } from "react";
+import { Search, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -58,15 +60,55 @@ export function ProductFilters({
     [router, searchParams],
   );
 
+  const currentQuery = searchParams.get("q") ?? "";
+  const [searchValue, setSearchValue] = useState(currentQuery);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const handleSearch = useCallback(
+    (value: string) => {
+      setSearchValue(value);
+      clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        updateParam("q", value || null);
+      }, 300);
+    },
+    [updateParam],
+  );
+
+  const clearSearch = useCallback(() => {
+    setSearchValue("");
+    updateParam("q", null);
+  }, [updateParam]);
+
   const clearAll = useCallback(() => {
+    setSearchValue("");
     router.push("/products");
   }, [router]);
 
   const hasFilters =
-    currentType !== "all" || currentSet !== "all" || currentSeries !== "all" || currentLang !== "all";
+    currentType !== "all" || currentSet !== "all" || currentSeries !== "all" || currentLang !== "all" || currentQuery !== "";
 
   return (
     <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
+      <div className="relative w-full md:w-[220px]">
+        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          type="text"
+          placeholder="Search products..."
+          value={searchValue}
+          onChange={(e) => handleSearch(e.target.value)}
+          className="h-8 pl-8 pr-8 text-xs"
+        />
+        {searchValue && (
+          <button
+            onClick={clearSearch}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
       <Select value={currentLang} onValueChange={(v) => updateParam("lang", v)}>
         <SelectTrigger className="w-full md:w-[140px] h-8 text-xs">
           <SelectValue placeholder="All Languages" />
