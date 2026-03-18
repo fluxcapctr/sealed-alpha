@@ -113,7 +113,15 @@ export async function POST(request: Request) {
         .single();
 
       if (existing && existing.current_step >= 1) {
-        return NextResponse.json({ success: true, already_subscribed: true });
+        const resp = NextResponse.json({ success: true, already_subscribed: true });
+        resp.cookies.set("sa_access", "1", {
+          httpOnly: true,
+          secure: true,
+          sameSite: "lax",
+          maxAge: 60 * 60 * 24 * 365,
+          path: "/",
+        });
+        return resp;
       }
     }
 
@@ -187,7 +195,15 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ success: true });
+    const resp = NextResponse.json({ success: true });
+    resp.cookies.set("sa_access", "1", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 365, // 1 year
+      path: "/",
+    });
+    return resp;
   } catch (err) {
     console.error("[Welcome Email] Unexpected error:", err);
     return NextResponse.json(

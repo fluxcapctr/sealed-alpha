@@ -8,6 +8,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/signup", request.url));
   }
 
+  // Returning visitors with cookie skip landing/signup pages
+  if ((pathname === "/" || pathname === "/signup") && request.cookies.get("sa_access")?.value === "1") {
+    return NextResponse.redirect(new URL("/overview", request.url));
+  }
+
   return NextResponse.next();
 }
 

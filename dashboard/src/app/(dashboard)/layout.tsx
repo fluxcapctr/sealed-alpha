@@ -29,10 +29,12 @@ export default function DashboardLayout({
           <p className="mt-3">
             Notice wrong data or want to see something added?{" "}
             <a
-              href="mailto:eric@kitakamicards.com"
+              href="https://instagram.com/kitakami_cards"
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-zinc-400 underline hover:text-zinc-300"
             >
-              Drop me a line
+              @kitakami_cards on IG
             </a>
           </p>
         </footer>

@@ -301,7 +301,12 @@ def compute_rarity_values(
     unmatched = 0
     for cid, num in card_id_to_num.items():
         price = price_by_card.get(cid, 0)
+        # Try exact match first, then try stripping leading zeros
+        # (PokeDATA.io uses "030", pokemontcg.io uses "30")
         rarity = rarity_map.get(num)
+        if not rarity:
+            stripped = num.lstrip("0") or "0"
+            rarity = rarity_map.get(stripped)
         if not rarity:
             unmatched += 1
             rarity = "Unknown"
@@ -499,7 +504,7 @@ async def main():
     start = time.time()
     results = []
 
-    async with httpx.AsyncClient(timeout=30) as client:
+    async with httpx.AsyncClient(timeout=90) as client:
         for s in sets_to_scrape:
             pd_id = mapping[s["id"]]
             result = await scrape_set_value(client, db, s, pd_id, args.dry_run, args.rarity)

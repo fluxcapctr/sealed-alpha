@@ -25,6 +25,7 @@ import {
 import { SealedPremiumIndex } from "@/components/sealed-premium-index";
 import { PullRatesTable, type PullRateRow } from "@/components/pull-rates-table";
 import { RipScoreCard, type RipScoreRow } from "@/components/rip-score-card";
+import { SupplyAnalytics } from "@/components/supply-analytics";
 import type { ProductAnalytics } from "@/types/database";
 
 export const revalidate = 300;
@@ -453,54 +454,7 @@ export default async function AnalyticsPage() {
     }
   }
 
-  // Supply depletion — compute server-side, render as static HTML
-  const supplyRows = products
-    .filter((p) => p.current_quantity !== null && p.current_quantity > 0)
-    .map((p) => {
-      let quantityChange: number | null = null;
-      let days = 0;
-      if (p.current_quantity !== null && p.quantity_90d_ago !== null) {
-        quantityChange = p.quantity_90d_ago - p.current_quantity;
-        days = 90;
-      } else if (p.current_quantity !== null && p.quantity_30d_ago !== null) {
-        quantityChange = p.quantity_30d_ago - p.current_quantity;
-        days = 30;
-      } else if (p.current_quantity !== null && p.quantity_7d_ago !== null) {
-        quantityChange = p.quantity_7d_ago - p.current_quantity;
-        days = 7;
-      }
-      const depletionPerDay =
-        quantityChange !== null && days > 0 ? quantityChange / days : null;
-      const daysUntilSellout =
-        depletionPerDay !== null &&
-        depletionPerDay > 0 &&
-        p.current_quantity !== null
-          ? Math.round(p.current_quantity / depletionPerDay)
-          : null;
-      return { ...p, depletionPerDay, daysUntilSellout };
-    })
-    .sort((a, b) => {
-      if (a.depletionPerDay === null && b.depletionPerDay === null) return 0;
-      if (a.depletionPerDay === null) return 1;
-      if (b.depletionPerDay === null) return -1;
-      return b.depletionPerDay - a.depletionPerDay;
-    })
-    .slice(0, 30);
-
-  const totalUnits = products.reduce(
-    (sum, p) => sum + (p.current_quantity ?? 0),
-    0
-  );
-  const productsWithQty = products.filter(
-    (p) => p.current_quantity !== null && p.current_quantity > 0
-  ).length;
-  const hasHistoricalData = supplyRows.some((r) => r.depletionPerDay !== null);
-  const depletingCount = supplyRows.filter(
-    (r) => r.depletionPerDay !== null && r.depletionPerDay > 0
-  ).length;
-  const criticalCount = supplyRows.filter(
-    (r) => r.daysUntilSellout !== null && r.daysUntilSellout <= 90
-  ).length;
+  // Supply depletion data passed to client component for filtering
 
   // Pick two EN products of the same type from different eras for lifecycle chart
   const lifecycleInitial = (() => {
@@ -590,150 +544,8 @@ export default async function AnalyticsPage() {
       {/* Pull Rates Table */}
       <PullRatesTable data={pullRateRows} />
 
-      {/* Supply Depletion — server-rendered */}
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Total Units Tracked
-              </p>
-              <p className="text-2xl font-bold tabular-nums">
-                {totalUnits.toLocaleString()}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                across {productsWithQty} products
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Depleting Products
-              </p>
-              <p className="text-2xl font-bold tabular-nums text-amber-400">
-                {hasHistoricalData ? depletingCount : "--"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {hasHistoricalData
-                  ? "supply actively declining"
-                  : "needs multi-day data"}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Critical (&lt;90 days)
-              </p>
-              <p className="text-2xl font-bold tabular-nums text-red-400">
-                {hasHistoricalData ? criticalCount : "--"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {hasHistoricalData
-                  ? "estimated to sell out within 90 days"
-                  : "needs multi-day data"}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">
-              Supply Depletion Rankings
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {!hasHistoricalData && (
-              <div className="px-4 py-2 text-xs text-amber-400 bg-amber-500/10 border-b border-border">
-                Depletion rates require multiple days of quantity data. Keep
-                running the daily scraper.
-              </div>
-            )}
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Set</TableHead>
-                  <TableHead className="text-right">Qty</TableHead>
-                  <TableHead className="text-right">Price</TableHead>
-                  <TableHead className="text-right">Depletion/Day</TableHead>
-                  <TableHead className="text-right">Est. Sell-out</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {supplyRows.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={6}
-                      className="text-center text-muted-foreground"
-                    >
-                      No products with quantity data found.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  supplyRows.map((row) => {
-                    const urgencyColor =
-                      row.daysUntilSellout !== null
-                        ? row.daysUntilSellout <= 30
-                          ? "text-red-400"
-                          : row.daysUntilSellout <= 90
-                            ? "text-amber-400"
-                            : "text-muted-foreground"
-                        : "text-muted-foreground";
-
-                    return (
-                      <TableRow key={row.product_id}>
-                        <TableCell className="font-medium text-sm max-w-[200px] truncate">
-                          {row.product_name}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground max-w-[120px] truncate">
-                          {row.set_name}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-sm">
-                          {row.current_quantity?.toLocaleString() ?? "--"}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-sm">
-                          {formatPrice(row.current_price)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-sm">
-                          {row.depletionPerDay !== null ? (
-                            <span
-                              className={
-                                row.depletionPerDay > 0
-                                  ? "text-red-400"
-                                  : row.depletionPerDay < 0
-                                    ? "text-green-400"
-                                    : "text-muted-foreground"
-                              }
-                            >
-                              {row.depletionPerDay > 0 ? "-" : "+"}
-                              {Math.abs(row.depletionPerDay).toFixed(1)}/day
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">--</span>
-                          )}
-                        </TableCell>
-                        <TableCell
-                          className={`text-right font-mono text-sm ${urgencyColor}`}
-                        >
-                          {row.daysUntilSellout !== null
-                            ? `${row.daysUntilSellout}d`
-                            : row.depletionPerDay !== null &&
-                                row.depletionPerDay <= 0
-                              ? "Growing"
-                              : "--"}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Supply Depletion — client component with filters */}
+      <SupplyAnalytics products={products} />
 
     </div>
   );

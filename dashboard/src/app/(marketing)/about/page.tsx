@@ -159,11 +159,13 @@ export default function AboutPage() {
           <p>
             Notice incorrect data, have a feature request, or just want to talk
             sealed product?{" "}
-            <a
-              href="mailto:eric@kitakamicards.com"
+          <a
+              href="https://instagram.com/kitakami_cards"
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-foreground underline hover:text-primary"
             >
-              Shoot me an email
+              Hit me up on IG @kitakami_cards
             </a>
             .
           </p>

@@ -283,7 +283,14 @@ SWSH_PULL_RATES: dict[str, list[tuple[str, float, int | None]]] = {
         ("Rainbow Rare", 78, 18),
         ("Secret Rare (Gold)", 130, 9),
     ],
-    "Pokémon GO": [],  # No detailed pull rate data in TSV
+    "Pokémon GO": [
+        ("Rare Holo V", 8, 6),
+        ("Rare Holo VSTAR", 24, 2),
+        ("Rare Ultra", 36, 8),
+        ("Rare Rainbow", 72, 7),
+        ("Rare Secret", 300, 3),
+        ("Radiant Rare", 11, 3),
+    ],
     "Lost Origin": [
         ("V", 9, 12),
         ("VMAX/VSTAR", 23, 7),
