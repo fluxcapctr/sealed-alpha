@@ -12,7 +12,8 @@ import argparse
 import json
 import logging
 import sys
-from datetime import date, timedelta
+import time
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -62,6 +63,10 @@ STEP_TEMPLATES: dict[int, dict] = {
 
 TOTAL_STEPS = 6
 
+SITE_URL = "https://sealedalpha.com"
+# Resend's default limit is 2 requests/second; stay under it.
+SEND_INTERVAL_SECONDS = 0.6
+
 
 def email_wrapper(body: str, unsubscribe_url: str) -> str:
     """Wrap email body in the dark-themed shell with header and footer."""
@@ -97,7 +102,7 @@ def cta_button(text: str, url: str, color: str = "#f59e0b") -> str:
 
 def render_template(step: int, config: Config, unsubscribe_url: str) -> str:
     """Render the HTML email for a given step."""
-    site = "https://sealedalpha.com"
+    site = SITE_URL
     wholesale = config.wholesale_url
 
     if step == 1:
@@ -240,20 +245,70 @@ def render_template(step: int, config: Config, unsubscribe_url: str) -> str:
     return email_wrapper(body, unsubscribe_url)
 
 
+def claim_step(db: Database, sub: dict, next_step: int, next_date: str | None) -> bool:
+    """
+    Advance the subscriber to `next_step` BEFORE sending, as a compare-and-set on
+    current_step. Returns False if someone else already claimed it.
+
+    Claiming first makes a duplicate send impossible: if two runs overlap (cron plus a
+    manual dispatch) only one wins the update, and if a DB write fails after a send
+    the step has already moved on, so the next run won't email the same step again.
+    A failed send releases the claim (see release_step).
+    """
+    result = (
+        db.client.table("drip_subscribers")
+        .update({
+            "current_step": next_step,
+            "next_send_date": next_date,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        })
+        .eq("id", sub["id"])
+        .eq("current_step", sub["current_step"])
+        .eq("opted_out", False)
+        .execute()
+    )
+    return bool(result.data)
+
+
+def release_step(db: Database, sub: dict, claimed_step: int) -> None:
+    """Undo claim_step after a failed send so the step is retried on the next run."""
+    try:
+        (
+            db.client.table("drip_subscribers")
+            .update({
+                "current_step": sub["current_step"],
+                "next_send_date": sub.get("next_send_date"),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            })
+            .eq("id", sub["id"])
+            .eq("current_step", claimed_step)
+            .execute()
+        )
+    except Exception as e:
+        # Worst case the subscriber skips one email; never a duplicate.
+        logger.error(f"  Could not release step {claimed_step} for {sub['email']} (will not be retried): {e}")
+
+
 def send_drip_emails(db: Database, config: Config, dry_run: bool = False,
                      target_email: str | None = None, force_step: int | None = None) -> dict:
     """Send due drip emails to subscribers."""
     today = date.today()
     today_str = today.isoformat()
 
-    # Query due subscribers
-    query = db.client.table("drip_subscribers").select("*").eq("opted_out", False)
-    if target_email:
-        query = query.eq("email", target_email)
-    else:
-        query = query.lte("next_send_date", today_str).lt("current_step", TOTAL_STEPS)
+    # Query due subscribers (paginated: PostgREST truncates at 1000 rows)
+    def build(start: int, end: int):
+        query = (
+            db.client.table("drip_subscribers")
+            .select("*")
+            .eq("opted_out", False)
+            .order("id")
+            .range(start, end)
+        )
+        if target_email:
+            return query.eq("email", target_email.strip().lower())
+        return query.lte("next_send_date", today_str).lt("current_step", TOTAL_STEPS)
 
-    subscribers = query.execute().data or []
+    subscribers = db.fetch_all(build)
 
     if not subscribers:
         logger.info("No drip emails due today")
@@ -261,15 +316,15 @@ def send_drip_emails(db: Database, config: Config, dry_run: bool = False,
 
     logger.info(f"Found {len(subscribers)} subscriber(s) due for drip emails")
 
-    if not config.resend_api_key:
+    if not config.resend_api_key and not dry_run:
         logger.warning("No RESEND_API_KEY configured. Skipping send.")
         return {"sent": 0, "error": "Missing RESEND_API_KEY"}
 
-    import resend
-    resend.api_key = config.resend_api_key
+    if not dry_run:
+        import resend
+        resend.api_key = config.resend_api_key
 
-    results = {"sent": 0, "failed": 0, "by_step": {}}
-    site_url = "https://sealedalpha.com"
+    results = {"sent": 0, "failed": 0, "skipped": 0, "by_step": {}}
 
     for sub in subscribers:
         next_step = force_step if force_step else sub["current_step"] + 1
@@ -281,12 +336,30 @@ def send_drip_emails(db: Database, config: Config, dry_run: bool = False,
         if not template_info:
             continue
 
-        unsubscribe_url = f"{site_url}/api/unsubscribe?token={sub['unsubscribe_token']}"
+        if not sub.get("unsubscribe_token"):
+            results["skipped"] += 1
+            logger.error(f"  {sub['email']} has no unsubscribe_token; not sending (every email needs a working unsubscribe link)")
+            continue
+        unsubscribe_url = f"{SITE_URL}/api/unsubscribe?token={sub['unsubscribe_token']}"
         html = render_template(next_step, config, unsubscribe_url)
 
         if dry_run:
             logger.info(f"  [DRY RUN] Step {next_step} ({template_info['key']}) → {sub['email']}")
             results["sent"] += 1
+            continue
+
+        delay = DRIP_SCHEDULE.get(next_step)
+        next_date = (today + timedelta(days=delay)).isoformat() if delay else None
+
+        try:
+            claimed = claim_step(db, sub, next_step, next_date)
+        except Exception as e:
+            results["failed"] += 1
+            logger.error(f"  Could not claim step {next_step} for {sub['email']}: {e}")
+            continue
+        if not claimed:
+            results["skipped"] += 1
+            logger.info(f"  Step {next_step} for {sub['email']} was already claimed by another run; skipping")
             continue
 
         try:
@@ -295,37 +368,41 @@ def send_drip_emails(db: Database, config: Config, dry_run: bool = False,
                 "to": sub["email"],
                 "subject": template_info["subject"],
                 "html": html,
+                # RFC 8058 one-click unsubscribe: mailbox providers show a native
+                # "Unsubscribe" button and bulk senders are expected to support it.
+                "headers": {
+                    "List-Unsubscribe": f"<{unsubscribe_url}>",
+                    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+                },
             })
-            resend_id = resp.get("id") if isinstance(resp, dict) else str(resp)
+        except Exception as e:
+            release_step(db, sub, next_step)
+            results["failed"] += 1
+            logger.error(f"  Failed step {next_step} → {sub['email']}: {e}")
+            time.sleep(SEND_INTERVAL_SECONDS)
+            continue
 
-            # Log the send
+        resend_id = resp.get("id") if isinstance(resp, dict) else str(resp)
+        try:
             db.client.table("drip_log").insert({
                 "subscriber_id": sub["id"],
                 "step": next_step,
                 "template_key": template_info["key"],
                 "resend_id": resend_id,
             }).execute()
-
-            # Update subscriber state
-            delay = DRIP_SCHEDULE.get(next_step)
-            next_date = (today + timedelta(days=delay)).isoformat() if delay else None
-
-            db.client.table("drip_subscribers").update({
-                "current_step": next_step,
-                "next_send_date": next_date,
-                "updated_at": today_str,
-            }).eq("id", sub["id"]).execute()
-
-            results["sent"] += 1
-            step_key = str(next_step)
-            results["by_step"][step_key] = results["by_step"].get(step_key, 0) + 1
-            logger.info(f"  Sent step {next_step} ({template_info['key']}) → {sub['email']}")
-
         except Exception as e:
-            results["failed"] += 1
-            logger.error(f"  Failed step {next_step} → {sub['email']}: {e}")
+            # The email went out and the step is already advanced; only the audit row is missing.
+            logger.error(f"  Sent step {next_step} to {sub['email']} (resend id {resend_id}) but could not log it: {e}")
 
-    logger.info(f"Drip complete: {results['sent']} sent, {results.get('failed', 0)} failed")
+        results["sent"] += 1
+        step_key = str(next_step)
+        results["by_step"][step_key] = results["by_step"].get(step_key, 0) + 1
+        logger.info(f"  Sent step {next_step} ({template_info['key']}) → {sub['email']}")
+        time.sleep(SEND_INTERVAL_SECONDS)
+
+    logger.info(
+        f"Drip complete: {results['sent']} sent, {results['failed']} failed, {results['skipped']} skipped"
+    )
     if results["by_step"]:
         logger.info(f"  By step: {results['by_step']}")
     return results

@@ -5,9 +5,25 @@ from typing import Optional
 from datetime import date
 
 
+def _drop_unset(d: dict, required: tuple[str, ...] = ()) -> dict:
+    """
+    Keep only fields the caller actually set.
+
+    These dicts are sent to PostgREST as upserts, and an upsert overwrites every
+    column that is present in the payload. Dropping None and "" means re-seeding
+    a row never blanks values written by other tools (logos, release dates,
+    MSRP, manual is_active / is_in_print changes). The DB column defaults still
+    apply when a row is first inserted.
+    """
+    return {k: v for k, v in d.items() if k in required or (v is not None and v != "")}
+
+
 @dataclass
 class PokemonSet:
-    """A Pokemon TCG set (e.g., 'Scarlet & Violet - 151')."""
+    """A Pokemon TCG set (e.g., 'Scarlet & Violet - 151').
+
+    Leave a field unset (None / "") to keep whatever is already stored.
+    """
     id: Optional[str] = None
     name: str = ""
     code: str = ""
@@ -16,25 +32,21 @@ class PokemonSet:
     tcgplayer_group_id: Optional[int] = None
     set_url: str = ""
     image_url: str = ""
-    is_in_print: bool = True
-    is_in_rotation: bool = True
-    total_products: int = 0
+    is_in_print: Optional[bool] = None
+    is_in_rotation: Optional[bool] = None
+    total_products: Optional[int] = None
     language: str = "en"
 
     def to_dict(self) -> dict:
-        d = asdict(self)
-        # Remove None id for inserts
-        if d["id"] is None:
-            del d["id"]
-        # Don't overwrite existing tcgplayer_group_id with None
-        if d.get("tcgplayer_group_id") is None:
-            d.pop("tcgplayer_group_id", None)
-        return d
+        return _drop_unset(asdict(self), required=("name", "code", "language"))
 
 
 @dataclass
 class Product:
-    """A sealed product within a set."""
+    """A sealed product within a set.
+
+    Leave a field unset (None / "") to keep whatever is already stored.
+    """
     id: Optional[str] = None
     set_id: Optional[str] = None
     name: str = ""
@@ -44,14 +56,11 @@ class Product:
     image_url: str = ""
     release_date: Optional[str] = None
     msrp: Optional[float] = None
-    is_active: bool = True
+    is_active: Optional[bool] = None
     language: str = "en"
 
     def to_dict(self) -> dict:
-        d = asdict(self)
-        if d["id"] is None:
-            del d["id"]
-        return d
+        return _drop_unset(asdict(self), required=("name", "product_type", "language"))
 
 
 @dataclass
