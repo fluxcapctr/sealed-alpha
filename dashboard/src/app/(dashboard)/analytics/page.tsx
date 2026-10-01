@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { formatPrice } from "@/lib/signals";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -33,40 +34,43 @@ export const revalidate = 300;
 export default async function AnalyticsPage() {
   const supabase = await createClient();
 
-  const { data: analytics } = await supabase
-    .from("product_analytics")
-    .select(
-      "product_id, product_name, product_type, set_id, set_name, series, release_date, is_in_print, current_price, current_quantity, current_listings, quantity_7d_ago, quantity_30d_ago, quantity_90d_ago, language"
-    )
-    .returns<
-      Pick<
-        ProductAnalytics,
-        | "product_id"
-        | "product_name"
-        | "product_type"
-        | "set_id"
-        | "set_name"
-        | "series"
-        | "release_date"
-        | "is_in_print"
-        | "current_price"
-        | "current_quantity"
-        | "current_listings"
-        | "quantity_7d_ago"
-        | "quantity_30d_ago"
-        | "quantity_90d_ago"
-        | "language"
-      >[]
-    >();
-
-  const products = analytics ?? [];
+  const products = await fetchAll((from, to) =>
+    supabase
+      .from("product_analytics")
+      .select(
+        "product_id, product_name, product_type, set_id, set_name, series, release_date, is_in_print, current_price, current_quantity, current_listings, quantity_7d_ago, quantity_30d_ago, quantity_90d_ago, language"
+      )
+      .order("product_id")
+      .range(from, to)
+      .returns<
+        Pick<
+          ProductAnalytics,
+          | "product_id"
+          | "product_name"
+          | "product_type"
+          | "set_id"
+          | "set_name"
+          | "series"
+          | "release_date"
+          | "is_in_print"
+          | "current_price"
+          | "current_quantity"
+          | "current_listings"
+          | "quantity_7d_ago"
+          | "quantity_30d_ago"
+          | "quantity_90d_ago"
+          | "language"
+        >[]
+      >()
+  );
 
   // Fetch set values for booster box chart
   const { data: setsData } = await supabase
     .from("sets")
     .select("id, name, series, total_set_value, release_date")
     .not("total_set_value", "is", null)
-    .order("release_date", { ascending: false });
+    .order("release_date", { ascending: false })
+    .throwOnError();
 
   const setValueMap = new Map<
     string,
@@ -84,14 +88,19 @@ export default async function AnalyticsPage() {
   }
 
   // Fetch pull rates + all sets (unfiltered) for pull rate mapping
-  const [{ data: pullRatesRaw }, { data: allSetsData }] = await Promise.all([
-    supabase
-      .from("pull_rates")
-      .select("set_id, rarity, packs_per_hit, cards_in_set"),
+  const [pullRatesRaw, { data: allSetsData }] = await Promise.all([
+    fetchAll((from, to) =>
+      supabase
+        .from("pull_rates")
+        .select("set_id, rarity, packs_per_hit, cards_in_set")
+        .order("id")
+        .range(from, to)
+    ),
     supabase
       .from("sets")
       .select("id, name, series, release_date")
-      .order("release_date", { ascending: false }),
+      .order("release_date", { ascending: false })
+      .throwOnError(),
   ]);
 
   const allSetsMap = new Map(
@@ -125,9 +134,13 @@ export default async function AnalyticsPage() {
   }
 
   // Fetch per-rarity values for EV computation
-  const { data: rarityValuesRaw } = await supabase
-    .from("set_rarity_values")
-    .select("set_id, rarity, total_value, card_count");
+  const rarityValuesRaw = await fetchAll((from, to) =>
+    supabase
+      .from("set_rarity_values")
+      .select("set_id, rarity, total_value, card_count")
+      .order("id")
+      .range(from, to)
+  );
 
   // Build rarity values by set: { setId: { rarity: { totalValue, cardCount } } }
   const rarityValuesBySet = new Map<

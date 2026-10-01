@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { fetchAll } from "@/lib/supabase/fetch-all";
+import { isUuid } from "@/lib/uuid";
 import { PriceChart } from "@/components/price-chart";
 import { SignalBadge } from "@/components/signal-badge";
 import { StatCard } from "@/components/stat-card";
@@ -21,28 +23,38 @@ export default async function ProductDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
+  // Postgres errors (rather than returning no rows) on a malformed UUID.
+  if (!isUuid(id)) return notFound();
+
   const { data: analyticsArr } = await supabase
     .from("product_analytics")
     .select("*")
     .eq("product_id", id)
-    .returns<ProductAnalytics[]>();
+    .returns<ProductAnalytics[]>()
+    .throwOnError();
 
   const product = analyticsArr?.[0];
   if (!product) return notFound();
 
-  const { data: priceHistory } = await supabase
-    .from("price_snapshots")
-    .select("snapshot_date, market_price, low_price, total_listings")
-    .eq("product_id", id)
-    .order("snapshot_date")
-    .returns<
-      Pick<
-        PriceSnapshot,
-        "snapshot_date" | "market_price" | "low_price" | "total_listings"
-      >[]
-    >();
+  // Full history, oldest first. Must be paginated: a plain limit would truncate
+  // the NEWEST rows (ascending order) once a product exceeds 1000 snapshots.
+  const priceHistory = await fetchAll((from, to) =>
+    supabase
+      .from("price_snapshots")
+      .select("snapshot_date, market_price, low_price, total_listings")
+      .eq("product_id", id)
+      .order("snapshot_date")
+      .order("id") // unique tiebreaker so pages never skip/duplicate rows
+      .range(from, to)
+      .returns<
+        Pick<
+          PriceSnapshot,
+          "snapshot_date" | "market_price" | "low_price" | "total_listings"
+        >[]
+      >()
+  );
 
-  const chartData = (priceHistory ?? []).map((p) => ({
+  const chartData = priceHistory.map((p) => ({
     date: p.snapshot_date,
     market_price: p.market_price,
     low_price: p.low_price,
@@ -55,7 +67,8 @@ export default async function ProductDetailPage({
     .eq("product_id", id)
     .order("signal_date", { ascending: false })
     .limit(1)
-    .returns<Signal[]>();
+    .returns<Signal[]>()
+    .throwOnError();
 
   const signal = signalArr?.[0] ?? null;
 
@@ -66,7 +79,8 @@ export default async function ProductDetailPage({
     .eq("product_id", id)
     .order("snapshot_date", { ascending: false })
     .limit(1)
-    .returns<SalesSnapshot[]>();
+    .returns<SalesSnapshot[]>()
+    .throwOnError();
 
   const sales = salesArr?.[0] ?? null;
 

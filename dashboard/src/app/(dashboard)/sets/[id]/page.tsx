@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { isUuid } from "@/lib/uuid";
 import { SignalBadge } from "@/components/signal-badge";
 import { ProductHoverImage } from "@/components/product-hover-image";
 import { formatPrice, formatPct, getPctColor } from "@/lib/signals";
@@ -150,6 +151,9 @@ export default async function SetDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
+  // Postgres errors (rather than returning no rows) on a malformed UUID.
+  if (!isUuid(id)) return notFound();
+
   const [
     { data: setData },
     { data: productsData },
@@ -157,31 +161,35 @@ export default async function SetDetailPage({
     { data: pullRatesData },
     { data: scoreData },
   ] = await Promise.all([
-    supabase.from("sets").select("*").eq("id", id).limit(1),
+    supabase.from("sets").select("*").eq("id", id).limit(1).throwOnError(),
     supabase
       .from("product_analytics")
       .select("*")
       .eq("set_id", id)
       .order("current_price", { ascending: false, nullsFirst: false })
-      .returns<ProductAnalytics[]>(),
+      .returns<ProductAnalytics[]>()
+      .throwOnError(),
     supabase
       .from("set_rarity_values")
       .select("*")
       .eq("set_id", id)
       .order("total_value", { ascending: false })
-      .returns<SetRarityValue[]>(),
+      .returns<SetRarityValue[]>()
+      .throwOnError(),
     supabase
       .from("pull_rates")
       .select("*")
       .eq("set_id", id)
       .order("packs_per_hit", { ascending: true })
-      .returns<PullRate[]>(),
+      .returns<PullRate[]>()
+      .throwOnError(),
     supabase
       .from("set_scores")
       .select("*")
       .eq("set_id", id)
       .limit(1)
-      .returns<SetScore[]>(),
+      .returns<SetScore[]>()
+      .throwOnError(),
   ]);
 
   const set = setData?.[0];

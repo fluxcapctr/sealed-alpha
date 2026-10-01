@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatPrice } from "@/lib/signals";
@@ -24,15 +25,20 @@ export default async function SetsPage({
     .from("sets")
     .select("*")
     .eq("language", lang)
-    .order("release_date", { ascending: false, nullsFirst: false });
+    .order("release_date", { ascending: false, nullsFirst: false })
+    .throwOnError();
 
   // Get product counts per set from analytics + set scores
-  const [{ data: analytics }, { data: scoresData }] = await Promise.all([
-    supabase
-      .from("product_analytics")
-      .select("*")
-      .returns<ProductAnalytics[]>(),
-    supabase.from("set_scores").select("set_id, overall_grade"),
+  const [analytics, { data: scoresData }] = await Promise.all([
+    fetchAll<ProductAnalytics>((from, to) =>
+      supabase
+        .from("product_analytics")
+        .select("*")
+        .order("product_id")
+        .range(from, to)
+        .returns<ProductAnalytics[]>()
+    ),
+    supabase.from("set_scores").select("set_id, overall_grade").throwOnError(),
   ]);
 
   const gradeMap = new Map<string, string>();
