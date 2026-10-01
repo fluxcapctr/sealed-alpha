@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import {
   getRecommendation,
   getSignalBgColor,
@@ -15,31 +14,19 @@ interface SignalBadgeProps {
   size?: "sm" | "md";
 }
 
-export function SignalBadge({
-  score,
-  recommendation,
-  showScore = false,
-  size = "sm",
-}: SignalBadgeProps) {
+export function SignalBadge({ score, recommendation, showScore = false, size = "sm" }: SignalBadgeProps) {
   const rec = (recommendation as Recommendation) ?? getRecommendation(score);
-  const color = getSignalColor(rec);
-  const bgColor = getSignalBgColor(rec);
-  const label = getSignalLabel(rec);
-
   return (
-    <Badge
-      variant="outline"
+    <span
       className={cn(
-        "border font-semibold",
-        bgColor,
-        color,
-        size === "md" ? "px-3 py-1 text-sm" : "px-2 py-0.5 text-xs"
+        "inline-flex items-center gap-1 rounded-sm border font-mono font-medium uppercase tracking-wide",
+        getSignalBgColor(rec),
+        getSignalColor(rec),
+        size === "md" ? "px-2.5 py-1 text-xs" : "px-1.5 py-0.5 text-[11px]"
       )}
     >
-      {label}
-      {showScore && score !== null && (
-        <span className="ml-1 opacity-70">({score > 0 ? "+" : ""}{score})</span>
-      )}
-    </Badge>
+      {getSignalLabel(rec)}
+      {showScore && score !== null && <span className="opacity-70 tabular-nums">{score > 0 ? "+" : ""}{score}</span>}
+    </span>
   );
 }

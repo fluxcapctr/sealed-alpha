@@ -83,7 +83,7 @@ function CustomTooltip({
             style={{ backgroundColor: "var(--color-productPrice)" }}
           />
           <span className="text-muted-foreground">{productLabel}:</span>
-          <span className="font-mono font-medium ml-auto">
+          <span className="tabular-nums font-medium ml-auto">
             $
             {product.toLocaleString(undefined, {
               minimumFractionDigits: 2,
@@ -97,7 +97,7 @@ function CustomTooltip({
             style={{ backgroundColor: "var(--color-masterSet)" }}
           />
           <span className="text-muted-foreground">Master Set:</span>
-          <span className="font-mono font-medium ml-auto">
+          <span className="tabular-nums font-medium ml-auto">
             $
             {set.toLocaleString(undefined, {
               minimumFractionDigits: 2,
@@ -107,7 +107,7 @@ function CustomTooltip({
         </div>
         <div className="border-t border-border/50 pt-1 mt-0.5">
           <span className="text-muted-foreground">Ratio:</span>
-          <span className="font-mono font-medium ml-2">{ratio}%</span>
+          <span className="tabular-nums font-medium ml-2">{ratio}%</span>
         </div>
       </div>
     </div>

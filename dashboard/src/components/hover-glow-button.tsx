@@ -13,7 +13,7 @@ interface HoverGlowButtonProps {
 export function HoverGlowButton({
   children,
   className,
-  glowColor = "#E8561C",
+  glowColor = "#FFD0A6",
   variant = "primary",
 }: HoverGlowButtonProps) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -36,7 +36,7 @@ export function HoverGlowButton({
       className={cn(
         "relative inline-flex cursor-pointer items-center justify-center overflow-hidden rounded-lg px-6 py-3 text-sm font-semibold transition-colors duration-300",
         variant === "primary" &&
-          "border border-orange-500/30 bg-orange-600/10 text-foreground hover:text-white",
+          "border border-orange-300/30 bg-primary text-primary-foreground shadow-[0_0_24px_-6px] shadow-primary/60",
         variant === "outline" &&
           "border border-border bg-transparent text-foreground hover:text-white",
         className

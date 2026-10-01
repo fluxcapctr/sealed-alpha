@@ -24,7 +24,7 @@ export function StatCard({
   trend,
 }: StatCardProps) {
   return (
-    <Card>
+    <Card className="gap-0 py-0">
       <CardContent className="flex items-start justify-between p-4">
         <div className="space-y-1">
           {tooltip ? (
@@ -39,7 +39,7 @@ export function StatCard({
               {title}
             </p>
           )}
-          <p className="text-2xl font-bold tabular-nums">{value}</p>
+          <p className="text-2xl font-semibold tracking-tight tabular-nums">{value}</p>
           {trend && (
             <p
               className={cn(
@@ -55,7 +55,7 @@ export function StatCard({
           )}
         </div>
         {Icon && (
-          <div className="rounded-lg bg-primary/10 p-2">
+          <div className="rounded-lg bg-primary/12 p-2 ring-1 ring-primary/20">
             <Icon className="h-5 w-5 text-primary" />
           </div>
         )}

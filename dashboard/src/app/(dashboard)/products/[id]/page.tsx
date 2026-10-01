@@ -1,13 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { PriceChart } from "@/components/price-chart";
-import { SignalBadge } from "@/components/signal-badge";
-import { StatCard } from "@/components/stat-card";
-import { formatPrice, formatPct } from "@/lib/signals";
+import { SignalMeter } from "@/components/signal-meter";
+import { WatchButton } from "@/components/watch-button";
+import { formatPrice, formatPct, getPctColor } from "@/lib/signals";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ExternalLink, Calendar, Printer, RotateCcw } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ProductThumb } from "@/components/product-thumb";
 import { InfoTip } from "@/components/info-tip";
 import type { ProductAnalytics, PriceSnapshot, Signal, SalesSnapshot } from "@/types/database";
 
@@ -70,122 +70,109 @@ export default async function ProductDetailPage({
 
   const sales = salesArr?.[0] ?? null;
 
+  // Why the verdict is what it is: the strongest positive and negative components of the composite score.
+  const parts = signal
+    ? [
+        ["Price vs MA", signal.price_vs_ma_score],
+        ["Momentum", signal.momentum_score],
+        ["Volatility", signal.volatility_score],
+        ["Listings trend", signal.listings_score],
+        ["Sales velocity", signal.sales_velocity_score],
+        ["Set lifecycle", signal.lifecycle_score],
+      ]
+        .filter((x): x is [string, number] => x[1] != null)
+        .sort((a, b) => b[1] - a[1])
+    : [];
+  const lifts = parts.filter(([, v]) => v >= 20).slice(0, 2);
+  const drags = parts.filter(([, v]) => v <= -20).slice(-2).reverse();
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{product.product_name}</h1>
-          <div className="mt-1 flex items-center gap-3">
-            <Link
-              href={`/sets/${product.set_id}`}
-              className="text-sm text-muted-foreground hover:underline"
-            >
-              {product.set_name}
+      <div className="grid gap-5 sm:grid-cols-[auto_minmax(0,1fr)] lg:grid-cols-[auto_minmax(0,1fr)_auto]">
+        <div className="flex h-44 w-44 items-center justify-center rounded-md border bg-card dot-grid">
+          <ProductThumb
+            tcgplayerProductId={product.tcgplayer_product_id}
+            imageUrl={product.product_image}
+            name={product.product_name}
+            size={150}
+            className="max-h-[150px] max-w-[150px]"
+          />
+        </div>
+        <div className="min-w-0 space-y-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
+            <Link href={`/sets/${product.set_id}`} className="text-foreground hover:text-primary">
+              {product.set_code ?? product.set_name}
             </Link>
-            <Badge variant="outline" className="text-xs">
-              {product.product_type}
-            </Badge>
+            <span>{product.product_type}</span>
+            <span>{product.is_in_print ? "In print" : "Out of print"}</span>
+            <span>{product.is_in_rotation ? "In rotation" : "Rotated out"}</span>
             {product.tcgplayer_url && (
-              <a
-                href={product.tcgplayer_url}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-blue-400 hover:underline"
-              >
-                TCGPlayer <ExternalLink className="h-3 w-3" />
+              <a href={product.tcgplayer_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                TCGPlayer <ExternalLink className="size-3" />
               </a>
             )}
           </div>
-        </div>
-        <div className="text-right">
-          <p className="text-3xl font-bold font-mono tabular-nums">
-            {formatPrice(product.current_price)}
-          </p>
-          <SignalBadge
-            score={product.signal_score}
-            recommendation={product.signal_recommendation}
-            showScore
-            size="md"
-          />
-        </div>
-      </div>
-
-      {/* Key Stats */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard
-          title="7d Change"
-          value={formatPct(product.price_change_7d_pct)}
-        />
-        <StatCard
-          title="30d Change"
-          value={formatPct(product.price_change_30d_pct)}
-        />
-        <StatCard
-          title="All-Time Low"
-          value={formatPrice(product.all_time_low)}
-        />
-        <StatCard
-          title="All-Time High"
-          value={formatPrice(product.all_time_high)}
-        />
-        <StatCard
-          title="Qty Available"
-          tooltip="Number of items for sale on TCGPlayer.com across all sellers."
-          value={
-            product.current_quantity != null
-              ? product.current_quantity.toLocaleString()
-              : "--"
-          }
-        />
-        <StatCard
-          title="Total Sold (90d)"
-          tooltip="Total units sold on TCGPlayer in the last 90 days."
-          value={
-            sales?.total_sales != null
-              ? sales.total_sales.toLocaleString()
-              : "--"
-          }
-        />
-        <StatCard
-          title="Avg Daily Sold"
-          tooltip="Average units sold per day on TCGPlayer over the last 90 days."
-          value={
-            sales?.sale_count_24h != null
-              ? sales.sale_count_24h.toLocaleString()
-              : "--"
-          }
-        />
-        {sales?.min_sale_price != null && sales?.max_sale_price != null && (
-          <StatCard
-            title="Sale Range (90d)"
-            tooltip="Lowest and highest sale prices on TCGPlayer in the last 90 days."
-            value={`${formatPrice(sales.min_sale_price)} - ${formatPrice(sales.max_sale_price)}`}
-          />
-        )}
-      </div>
-
-      {/* Set Lifecycle Info */}
-      <div className="flex flex-wrap gap-3">
-        <div className="flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-xs">
-          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-          Released: {product.release_date ?? "Unknown"}
-          {product.days_since_release !== null &&
-            ` (${product.days_since_release}d ago)`}
-        </div>
-        <div className="flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-xs">
-          <Printer className="h-3.5 w-3.5 text-muted-foreground" />
-          {product.is_in_print ? "In Print" : "Out of Print"}
-        </div>
-        <div className="flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-xs">
-          <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
-          {product.is_in_rotation ? "In Rotation" : "Rotated Out"}
-        </div>
-        {product.msrp && (
-          <div className="rounded-md border border-border px-3 py-1.5 text-xs">
-            MSRP: {formatPrice(product.msrp)}
+          <h1 className="text-2xl font-semibold leading-tight tracking-tight">{product.product_name}</h1>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <SignalMeter score={product.signal_score} recommendation={product.signal_recommendation} block={7} />
+            <span className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
+              {product.release_date ?? "Release unknown"}
+              {product.days_since_release !== null && ` \u00B7 ${product.days_since_release}d old`}
+              {product.msrp ? ` \u00B7 MSRP ${formatPrice(product.msrp)}` : ""}
+            </span>
           </div>
-        )}
+          {(lifts.length > 0 || drags.length > 0) && (
+            <p className="max-w-xl font-mono text-[11.5px] leading-relaxed text-muted-foreground">
+              {lifts.length > 0 && (
+                <>
+                  <span className="text-foreground">Lifting</span> {lifts.map(([n, v]) => `${n} +${Math.round(v)}`).join(", ")}.{" "}
+                </>
+              )}
+              {drags.length > 0 && (
+                <>
+                  <span className="text-foreground">Dragging</span> {drags.map(([n, v]) => `${n} ${Math.round(v)}`).join(", ")}.
+                </>
+              )}
+            </p>
+          )}
+        </div>
+        <div className="flex flex-col items-start gap-3 sm:col-span-2 sm:flex-row sm:items-start sm:justify-between lg:col-span-1 lg:flex-col lg:items-end">
+          <div className="lg:text-right">
+            <p className="text-4xl font-semibold tracking-tight tabular-nums">{formatPrice(product.current_price)}</p>
+            <p className="mt-1 font-mono text-xs tabular-nums">
+              <span className={getPctColor(product.price_change_7d_pct)}>{formatPct(product.price_change_7d_pct)} 7d</span>
+              <span className="mx-2 text-muted-foreground">/</span>
+              <span className={getPctColor(product.price_change_30d_pct)}>{formatPct(product.price_change_30d_pct)} 30d</span>
+            </p>
+          </div>
+          <WatchButton productName={product.product_name} />
+        </div>
+      </div>
+
+      {/* Key stats: one panel, hairline grid */}
+      <div className="grid grid-cols-2 divide-x divide-y divide-border overflow-hidden rounded-md border bg-card lg:grid-cols-4 [&>*:nth-child(2n+1)]:border-l-0 lg:[&>*:nth-child(2n+1)]:border-l [&>*:nth-child(4n+1)]:lg:border-l-0">
+        {[
+          { t: "All-time low", v: formatPrice(product.all_time_low) },
+          { t: "All-time high", v: formatPrice(product.all_time_high) },
+          { t: "Qty available", v: product.current_quantity != null ? product.current_quantity.toLocaleString() : "--", tip: "Number of items for sale on TCGPlayer.com across all sellers." },
+          { t: "Sold, 90d", v: sales?.total_sales != null ? sales.total_sales.toLocaleString() : "--", tip: "Total units sold on TCGPlayer in the last 90 days." },
+          { t: "Avg daily sold", v: sales?.sale_count_24h != null ? sales.sale_count_24h.toLocaleString() : "--", tip: "Average units sold per day on TCGPlayer over the last 90 days." },
+          { t: "Sale range, 90d", v: sales?.min_sale_price != null && sales?.max_sale_price != null ? `${formatPrice(sales.min_sale_price)} \u2013 ${formatPrice(sales.max_sale_price)}` : "--", tip: "Lowest and highest sale prices on TCGPlayer in the last 90 days." },
+          { t: "7d MA", v: formatPrice(product.ma_7d) },
+          { t: "30d MA", v: formatPrice(product.ma_30d) },
+        ].map((c) => (
+          <div key={c.t} className="px-4 py-3">
+            <div className="flex h-4 items-center">
+              {c.tip ? (
+                <InfoTip label={<span className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted-foreground">{c.t}</span>} side="bottom">{c.tip}</InfoTip>
+              ) : (
+                <p className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted-foreground">{c.t}</p>
+              )}
+            </div>
+            <p className="mt-1 text-lg font-semibold tabular-nums">{c.v}</p>
+          </div>
+        ))}
       </div>
 
       {/* Price Chart */}
@@ -246,35 +233,6 @@ export default async function ProductDetailPage({
           </CardContent>
         </Card>
       )}
-
-      {/* Moving Averages */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Moving Averages</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <p className="text-xs text-muted-foreground">7-Day MA</p>
-              <p className="text-lg font-mono font-semibold">
-                {formatPrice(product.ma_7d)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">30-Day MA</p>
-              <p className="text-lg font-mono font-semibold">
-                {formatPrice(product.ma_30d)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">90-Day MA</p>
-              <p className="text-lg font-mono font-semibold">
-                {formatPrice(product.ma_90d)}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
@@ -292,12 +250,8 @@ function SignalComponent({
 }) {
   const val = score ?? 0;
   const pct = ((val + 100) / 200) * 100;
-  const color =
-    val > 20
-      ? "bg-green-500"
-      : val < -20
-        ? "bg-red-500"
-        : "bg-amber-500";
+  // Colourless like every verdict: strong contributions are light, weak ones grey; the side it fills shows the sign.
+  const color = Math.abs(val) > 20 ? "bg-foreground/85" : "bg-muted-foreground";
 
   return (
     <div className="space-y-1.5">
@@ -314,15 +268,16 @@ function SignalComponent({
             {label} <span className="opacity-50">({weight})</span>
           </span>
         )}
-        <span className="font-mono font-medium">
+        <span className="tabular-nums font-medium">
           {val > 0 ? "+" : ""}
           {val.toFixed(0)}
         </span>
       </div>
-      <div className="h-1.5 w-full rounded-full bg-muted">
+      <div className="relative h-1.5 w-full bg-muted">
+        <div className="absolute inset-y-0 left-1/2 w-px bg-foreground/30" />
         <div
-          className={`h-full rounded-full ${color}`}
-          style={{ width: `${Math.max(2, pct)}%` }}
+          className={`absolute inset-y-0 ${color}`}
+          style={val >= 0 ? { left: "50%", width: `${Math.max(1, val / 2)}%` } : { right: "50%", width: `${Math.max(1, Math.abs(val) / 2)}%` }}
         />
       </div>
     </div>

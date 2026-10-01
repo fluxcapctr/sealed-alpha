@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
-import { SignalBadge } from "@/components/signal-badge";
+import { SignalMeter } from "@/components/signal-meter";
+import { Sparkline } from "@/components/sparkline";
+import { getAsOf, getSeries, typeCode } from "@/lib/market";
 import { ProductHoverImage } from "@/components/product-hover-image";
 import { ProductFilters } from "@/components/product-filters";
 import { formatPrice, formatPct, getPctColor } from "@/lib/signals";
@@ -17,6 +19,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { HIDDEN_SUBSETS } from "@/lib/constants";
 import { ProductCardMobile } from "@/components/product-card-mobile";
+import { ProductGridCard } from "@/components/product-grid-card";
+import { ViewToggle, parseView } from "@/components/view-toggle";
 import type { ProductAnalytics, Set } from "@/types/database";
 
 export const revalidate = 300;
@@ -97,9 +101,11 @@ export default async function ProductsPage({
     q?: string;
     sort?: string;
     dir?: string;
+    view?: string;
   }>;
 }) {
   const params = await searchParams;
+  const view = parseView(params.view);
   const supabase = await createClient();
 
   // Fetch all sets for filter options
@@ -171,6 +177,8 @@ export default async function ProductsPage({
     .returns<ProductAnalytics[]>();
 
   const items = products ?? [];
+  const asOf = getAsOf(items);
+  const trend = asOf ? await getSeries(supabase, items.slice(0, 120).map((p) => p.product_id), asOf, 30) : new Map();
 
   // Derive unique product types from the full dataset for filter options
   const uniqueTypes = [...new Set(items.map((p) => p.product_type))].sort();
@@ -236,7 +244,7 @@ export default async function ProductsPage({
                 <div className="mt-3 flex flex-wrap items-baseline gap-4 md:gap-6">
                   {setInfo.total_set_value && (
                     <div>
-                      <p className="text-2xl font-mono font-bold text-primary">
+                      <p className="text-2xl tabular-nums font-bold text-primary">
                         {formatPrice(setInfo.total_set_value)}
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -246,14 +254,14 @@ export default async function ProductsPage({
                   )}
                   {setInfo.total_cards && (
                     <div>
-                      <p className="text-2xl font-mono font-bold">
+                      <p className="text-2xl tabular-nums font-bold">
                         {setInfo.total_cards}
                       </p>
                       <p className="text-xs text-muted-foreground">cards</p>
                     </div>
                   )}
                   <div>
-                    <p className="text-2xl font-mono font-bold">
+                    <p className="text-2xl tabular-nums font-bold">
                       {items.length}
                     </p>
                     <p className="text-xs text-muted-foreground">
@@ -280,7 +288,7 @@ export default async function ProductsPage({
         </Card>
       ) : (
         <div>
-          <h1 className="text-2xl font-bold">Products</h1>
+          <h1 className="font-pixel text-2xl font-semibold tracking-wide">Products</h1>
           <p className="text-sm text-muted-foreground">
             {items.length} sealed products tracked across{" "}
             {(allSets ?? []).filter((s) => !HIDDEN_SUBSETS.has(s.name)).length} sets
@@ -295,108 +303,139 @@ export default async function ProductsPage({
         series={seriesOptions}
       />
 
-      {/* Desktop Table */}
-      <div className="hidden md:block">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-sm">
-              Product Catalog
-            </CardTitle>
-            <span className="text-xs text-muted-foreground tabular-nums">
-              {items.length} items
-            </span>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Product</TableHead>
-                  <SortHeader params={params} field="set_name" label="Set" />
-                  <SortHeader params={params} field="product_type" label="Type" />
-                  <SortHeader params={params} field="current_price" label="Price" align="right" />
-                  <SortHeader params={params} field="price_change_7d_pct" label="7d" align="right" />
-                  <SortHeader params={params} field="price_change_30d_pct" label="30d" align="right" />
-                  <SortHeader params={params} field="current_quantity" label="Qty" align="right" />
-                  <SortHeader params={params} field="signal_score" label="Signal" align="right" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={8}
-                      className="text-center text-muted-foreground"
-                    >
-                      No products found matching your filters.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  items.map((p) => (
-                    <TableRow key={p.product_id}>
-                      <TableCell>
-                        <ProductHoverImage
-                          productId={p.product_id}
-                          tcgplayerProductId={p.tcgplayer_product_id}
-                          name={p.product_name}
-                        />
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {p.set_name}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {p.product_type}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatPrice(p.current_price)}
-                      </TableCell>
-                      <TableCell
-                        className={`text-right font-mono text-sm ${getPctColor(p.price_change_7d_pct)}`}
-                      >
-                        {formatPct(p.price_change_7d_pct)}
-                      </TableCell>
-                      <TableCell
-                        className={`text-right font-mono text-sm ${getPctColor(p.price_change_30d_pct)}`}
-                      >
-                        {formatPct(p.price_change_30d_pct)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
-                        {p.current_quantity != null
-                          ? p.current_quantity.toLocaleString()
-                          : "--"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <SignalBadge
-                          score={p.signal_score}
-                          recommendation={p.signal_recommendation}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Mobile Cards */}
-      <div className="md:hidden space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold">Product Catalog</span>
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {items.length} items
-          </span>
-        </div>
-        {items.length === 0 ? (
-          <div className="rounded-lg border border-border bg-card p-8 text-center text-muted-foreground">
-            No products found matching your filters.
+      {view === "grid" ? (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <CardTitle>Catalog</CardTitle>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {items.length} items
+              </span>
+              <ViewToggle params={params} view={view} />
+            </div>
           </div>
-        ) : (
-          items.map((p) => (
-            <ProductCardMobile key={p.product_id} product={p} />
-          ))
-        )}
-      </div>
+          {items.length === 0 ? (
+            <div className="rounded-lg border border-border bg-card p-8 text-center text-muted-foreground">
+              No products found matching your filters.
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+              {items.map((p) => (
+                <ProductGridCard key={p.product_id} product={p} />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* Desktop Table */}
+          <div className="hidden md:block">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Catalog</CardTitle>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    {items.length} items
+                  </span>
+                  <ViewToggle params={params} view={view} />
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Product</TableHead>
+                      <SortHeader params={params} field="product_type" label="Type" />
+                      <SortHeader params={params} field="current_price" label="Price" align="right" />
+                      <SortHeader params={params} field="price_change_7d_pct" label="7d" align="right" />
+                      <SortHeader params={params} field="price_change_30d_pct" label="30d" align="right" />
+                      <TableHead>30d trend</TableHead>
+                      <SortHeader params={params} field="current_quantity" label="Qty" align="right" />
+                      <SortHeader params={params} field="signal_score" label="Verdict" />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {items.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={8}
+                          className="text-center text-muted-foreground"
+                        >
+                          No products found matching your filters.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      items.map((p) => (
+                        <TableRow key={p.product_id}>
+                          <TableCell className="whitespace-normal">
+                            <ProductHoverImage
+                              productId={p.product_id}
+                              tcgplayerProductId={p.tcgplayer_product_id}
+                              imageUrl={p.product_image}
+                              name={p.product_name}
+                              subtitle={p.set_name}
+                              size={40}
+                            />
+                          </TableCell>
+                          <TableCell className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
+                            {typeCode(p.product_type)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatPrice(p.current_price)}
+                          </TableCell>
+                          <TableCell
+                            className={`text-right tabular-nums text-sm ${getPctColor(p.price_change_7d_pct)}`}
+                          >
+                            {formatPct(p.price_change_7d_pct)}
+                          </TableCell>
+                          <TableCell
+                            className={`text-right tabular-nums text-sm ${getPctColor(p.price_change_30d_pct)}`}
+                          >
+                            {formatPct(p.price_change_30d_pct)}
+                          </TableCell>
+                          <TableCell>
+                            <Sparkline values={(trend.get(p.product_id) ?? []).map((x: { value: number }) => x.value)} width={72} height={20} />
+                          </TableCell>
+                          <TableCell className="text-right text-sm tabular-nums text-muted-foreground">
+                            {p.current_quantity != null
+                              ? p.current_quantity.toLocaleString()
+                              : "--"}
+                          </TableCell>
+                          <TableCell>
+                            <SignalMeter score={p.signal_score} recommendation={p.signal_recommendation} />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-2">
+            <div className="flex items-center justify-between">
+              <CardTitle>Catalog</CardTitle>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {items.length} items
+                </span>
+                <ViewToggle params={params} view={view} />
+              </div>
+            </div>
+            {items.length === 0 ? (
+              <div className="rounded-lg border border-border bg-card p-8 text-center text-muted-foreground">
+                No products found matching your filters.
+              </div>
+            ) : (
+              items.map((p) => (
+                <ProductCardMobile key={p.product_id} product={p} />
+              ))
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

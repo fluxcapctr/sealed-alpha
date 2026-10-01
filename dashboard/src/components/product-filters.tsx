@@ -82,15 +82,16 @@ export function ProductFilters({
 
   const clearAll = useCallback(() => {
     setSearchValue("");
-    router.push("/products");
-  }, [router]);
+    // Filters reset, but stay in whichever view (list/grid) the user picked.
+    router.push(searchParams.get("view") === "grid" ? "/products?view=grid" : "/products");
+  }, [router, searchParams]);
 
   const hasFilters =
     currentType !== "all" || currentSet !== "all" || currentSeries !== "all" || currentLang !== "all" || currentQuery !== "";
 
   return (
-    <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
-      <div className="relative w-full md:w-[220px]">
+    <div className="grid grid-cols-2 gap-2 md:flex md:flex-row md:flex-wrap md:items-center md:gap-3">
+      <div className="relative col-span-2 w-full md:w-[220px]">
         <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="text"
@@ -188,13 +189,21 @@ export function ProductFilters({
           <SelectItem value="set_name:asc">Set: A to Z</SelectItem>
           <SelectItem value="set_name:desc">Set: Z to A</SelectItem>
           <SelectItem value="product_type:asc">Type: A to Z</SelectItem>
+          <SelectItem value="price_change_7d_pct:desc">7d: Biggest gain</SelectItem>
+          <SelectItem value="price_change_7d_pct:asc">7d: Biggest drop</SelectItem>
+          <SelectItem value="price_change_30d_pct:desc">30d: Biggest gain</SelectItem>
+          <SelectItem value="price_change_30d_pct:asc">30d: Biggest drop</SelectItem>
+          <SelectItem value="signal_score:desc">Signal: Strongest buy</SelectItem>
+          <SelectItem value="signal_score:asc">Signal: Strongest sell</SelectItem>
+          <SelectItem value="current_quantity:desc">Supply: Most listed</SelectItem>
+          <SelectItem value="current_quantity:asc">Supply: Fewest listed</SelectItem>
         </SelectContent>
       </Select>
 
       {hasFilters && (
         <button
           onClick={clearAll}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors w-full md:w-auto text-center md:text-left"
+          className="col-span-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full md:w-auto text-center md:text-left"
         >
           Clear filters
         </button>

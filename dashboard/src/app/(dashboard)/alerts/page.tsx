@@ -15,10 +15,11 @@ import type { Alert } from "@/types/database";
 export const revalidate = 60;
 
 const ALERT_TYPE_LABELS: Record<string, { label: string; color: string }> = {
-  strong_buy: { label: "Strong Buy", color: "border-emerald-500/30 text-emerald-400" },
-  buy: { label: "Buy", color: "border-green-500/30 text-green-400" },
-  sell: { label: "Sell", color: "border-red-500/30 text-red-400" },
-  strong_sell: { label: "Strong Sell", color: "border-red-600/30 text-red-500" },
+  // Verdicts are colourless (green/red are reserved for price direction), strong ones just brighter.
+  strong_buy: { label: "Strong Buy", color: "border-foreground/50 text-foreground" },
+  buy: { label: "Buy", color: "border-foreground/25 text-foreground/85" },
+  sell: { label: "Sell", color: "border-foreground/25 text-foreground/85" },
+  strong_sell: { label: "Strong Sell", color: "border-foreground/50 text-foreground" },
   price_drop: { label: "Price Drop", color: "border-orange-500/30 text-orange-400" },
   price_spike: { label: "Price Spike", color: "border-blue-500/30 text-blue-400" },
   new_low: { label: "New Low", color: "border-amber-500/30 text-amber-400" },

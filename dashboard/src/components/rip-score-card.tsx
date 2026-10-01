@@ -151,14 +151,14 @@ export function RipScoreCard({
                         </span>
                         {row.setName}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
+                      <TableCell className="text-right tabular-nums text-sm">
                         $
                         {row.productPrice.toLocaleString(undefined, {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
+                      <TableCell className="text-right tabular-nums text-sm">
                         $
                         {row.boxEv.toLocaleString(undefined, {
                           minimumFractionDigits: 2,
@@ -166,7 +166,7 @@ export function RipScoreCard({
                         })}
                       </TableCell>
                       <TableCell
-                        className={`text-right font-mono text-sm font-bold ${getScoreColor(row.ripScore)}`}
+                        className={`text-right tabular-nums text-sm font-bold ${getScoreColor(row.ripScore)}`}
                       >
                         {row.ripScore.toFixed(2)}
                       </TableCell>
@@ -213,7 +213,7 @@ export function RipScoreCard({
                                           }}
                                         />
                                       </div>
-                                      <span className="w-[70px] text-right font-mono">
+                                      <span className="w-[70px] text-right tabular-nums">
                                         $
                                         {b.ev.toLocaleString(undefined, {
                                           minimumFractionDigits: 2,

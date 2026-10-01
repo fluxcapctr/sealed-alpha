@@ -375,13 +375,13 @@ export function SupplyAnalytics({ products }: SupplyAnalyticsProps) {
                       <TableCell className="text-sm text-muted-foreground max-w-[120px] truncate">
                         {row.product.set_name}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
+                      <TableCell className="text-right tabular-nums text-sm">
                         {row.product.current_quantity?.toLocaleString() ?? "--"}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
+                      <TableCell className="text-right tabular-nums text-sm">
                         {formatPrice(row.product.current_price)}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
+                      <TableCell className="text-right tabular-nums text-sm">
                         {row.depletionPerDay !== null ? (
                           <span
                             className={
@@ -399,7 +399,7 @@ export function SupplyAnalytics({ products }: SupplyAnalyticsProps) {
                           <span className="text-muted-foreground">--</span>
                         )}
                       </TableCell>
-                      <TableCell className={`text-right font-mono text-sm ${urgencyColor}`}>
+                      <TableCell className={`text-right tabular-nums text-sm ${urgencyColor}`}>
                         {row.daysUntilSellout !== null
                           ? `${row.daysUntilSellout}d`
                           : row.depletionPerDay !== null && row.depletionPerDay <= 0

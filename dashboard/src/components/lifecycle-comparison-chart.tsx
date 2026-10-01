@@ -135,7 +135,7 @@ function LifecycleTooltip({
                 <span className="text-muted-foreground">
                   {entry.product?.product_name ?? "Product"}:
                 </span>
-                <span className="font-mono font-medium ml-auto">
+                <span className="tabular-nums font-medium ml-auto">
                   ${match.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>

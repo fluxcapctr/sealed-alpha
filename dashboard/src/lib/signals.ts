@@ -21,33 +21,31 @@ export function getRecommendation(score: number | null): Recommendation {
   return "HOLD";
 }
 
+// Verdicts are deliberately colourless: green/red are reserved for price direction, and a verdict often disagrees
+// with it (a dip can be a BUY). The word and which side the meter fills carry buy vs sell; brightness carries strength.
 export function getSignalColor(recommendation: Recommendation): string {
   switch (recommendation) {
     case "STRONG_BUY":
-      return "text-emerald-400";
-    case "BUY":
-      return "text-green-400";
-    case "HOLD":
-      return "text-amber-400";
-    case "SELL":
-      return "text-red-400";
     case "STRONG_SELL":
-      return "text-red-500";
+      return "text-foreground";
+    case "BUY":
+    case "SELL":
+      return "text-foreground/85";
+    case "HOLD":
+      return "text-muted-foreground";
   }
 }
 
 export function getSignalBgColor(recommendation: Recommendation): string {
   switch (recommendation) {
     case "STRONG_BUY":
-      return "bg-emerald-500/15 border-emerald-500/30";
-    case "BUY":
-      return "bg-green-500/15 border-green-500/30";
-    case "HOLD":
-      return "bg-amber-500/15 border-amber-500/30";
-    case "SELL":
-      return "bg-red-500/15 border-red-500/30";
     case "STRONG_SELL":
-      return "bg-red-600/15 border-red-600/30";
+      return "bg-foreground/15 border-foreground/40";
+    case "BUY":
+    case "SELL":
+      return "bg-foreground/10 border-foreground/25";
+    case "HOLD":
+      return "bg-transparent border-border";
   }
 }
 
@@ -68,7 +66,7 @@ export function getSignalLabel(recommendation: Recommendation): string {
 
 export function formatPrice(price: number | null): string {
   if (price === null || price === undefined) return "--";
-  return `$${price.toFixed(2)}`;
+  return `$${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export function formatPct(pct: number | null): string {

@@ -1,68 +1,27 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
+import { ProductThumb } from "@/components/product-thumb";
 
-interface ProductHoverImageProps {
+interface ProductCellProps {
   productId: string;
   tcgplayerProductId: number | null;
+  imageUrl?: string | null;
   name: string;
+  /** Muted second line, e.g. "SSP · Booster Box". */
+  subtitle?: string;
+  size?: number;
 }
 
-export function ProductHoverImage({
-  productId,
-  tcgplayerProductId,
-  name,
-}: ProductHoverImageProps) {
-  const [show, setShow] = useState(false);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
-  const ref = useRef<HTMLDivElement>(null);
-
-  const imageUrl = tcgplayerProductId
-    ? `https://product-images.tcgplayer.com/fit-in/200x200/${tcgplayerProductId}.jpg`
-    : null;
-
-  const handleEnter = useCallback(() => {
-    if (ref.current) {
-      const rect = ref.current.getBoundingClientRect();
-      // Show above the element; if too close to top, show below
-      const showAbove = rect.top > 220;
-      setPos({
-        top: showAbove ? rect.top - 210 : rect.bottom + 4,
-        left: rect.left,
-      });
-    }
-    setShow(true);
-  }, []);
-
+/** Table product cell: photo + name link (+ optional subtitle). */
+export function ProductHoverImage({ productId, tcgplayerProductId, imageUrl, name, subtitle, size = 40 }: ProductCellProps) {
   return (
-    <div
-      ref={ref}
-      className="relative inline-block"
-      onMouseEnter={handleEnter}
-      onMouseLeave={() => setShow(false)}
-    >
-      <Link
-        href={`/products/${productId}`}
-        className="font-medium hover:underline"
-      >
-        {name}
-      </Link>
-      {show && imageUrl && (
-        <div
-          className="fixed z-50 rounded-lg border border-border bg-card p-1 shadow-xl pointer-events-none"
-          style={{ top: pos.top, left: pos.left }}
-        >
-          <img
-            src={imageUrl}
-            alt={name}
-            width={200}
-            height={200}
-            className="rounded"
-            loading="eager"
-          />
-        </div>
-      )}
-    </div>
+    <Link href={`/products/${productId}`} className="group flex items-center gap-3 whitespace-normal">
+      <ProductThumb tcgplayerProductId={tcgplayerProductId} imageUrl={imageUrl} name={name} size={size} />
+      <span className="min-w-0">
+        <span className="block text-[13px] font-medium leading-snug group-hover:text-primary">{name}</span>
+        {subtitle && <span className="block font-mono text-[11px] uppercase tracking-wide text-muted-foreground">{subtitle}</span>}
+      </span>
+    </Link>
   );
 }

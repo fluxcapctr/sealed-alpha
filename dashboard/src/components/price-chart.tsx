@@ -28,16 +28,19 @@ interface PriceChartProps {
 
 type TimeRange = "7d" | "30d" | "90d" | "1y" | "all";
 
-const chartConfig = {
-  market_price: {
-    label: "Market Price",
-    color: "var(--chart-1)",
-  },
-  ma30: {
-    label: "30-Day MA",
-    color: "var(--chart-5)",
-  },
-} satisfies ChartConfig;
+// Price is coloured by direction over the selected range, same as the sparklines. Green/red mean "price moved"
+// and nothing else; the moving average stays neutral so it never reads as a second up/down signal.
+const chartConfigFor = (up: boolean) =>
+  ({
+    market_price: {
+      label: "Market Price",
+      color: up ? "var(--color-up)" : "var(--color-down)",
+    },
+    ma30: {
+      label: "30-Day MA",
+      color: "var(--muted-foreground)",
+    },
+  }) satisfies ChartConfig;
 
 export function PriceChart({ data, title = "Price History" }: PriceChartProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>("90d");
@@ -107,6 +110,13 @@ export function PriceChart({ data, title = "Price History" }: PriceChartProps) {
       };
     });
   }, [cleanedData]);
+
+  // Up/down over the visible range (first vs last real price), so switching 7D/30D/90D can flip the colour.
+  const chartConfig = useMemo(() => {
+    const prices = chartData.map((d) => d.market_price).filter((p): p is number => p !== null);
+    const up = prices.length < 2 || prices[prices.length - 1] >= prices[0];
+    return chartConfigFor(up);
+  }, [chartData]);
 
   if (data.length === 0) {
     return (
@@ -199,7 +209,7 @@ export function PriceChart({ data, title = "Price History" }: PriceChartProps) {
                     const num =
                       typeof value === "number" ? value : Number(value);
                     return (
-                      <span className="font-mono font-semibold tabular-nums">
+                      <span className="tabular-nums font-semibold tabular-nums">
                         ${num.toFixed(2)}
                       </span>
                     );
@@ -222,7 +232,7 @@ export function PriceChart({ data, title = "Price History" }: PriceChartProps) {
                 dataKey="ma30"
                 type="natural"
                 stroke="var(--color-ma30)"
-                strokeWidth={2}
+                strokeWidth={1.5}
                 strokeDasharray="5 5"
                 dot={false}
                 connectNulls

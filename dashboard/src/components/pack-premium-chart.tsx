@@ -88,13 +88,13 @@ function CustomTooltip({
       <div className="grid gap-1">
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Total price:</span>
-          <span className="font-mono font-medium ml-auto">
+          <span className="tabular-nums font-medium ml-auto">
             ${item.totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground">Packs inside:</span>
-          <span className="font-mono font-medium ml-auto">
+          <span className="tabular-nums font-medium ml-auto">
             {item.packCount}
           </span>
         </div>
@@ -105,7 +105,7 @@ function CustomTooltip({
               style={{ backgroundColor: "var(--color-pricePerPack)" }}
             />
             <span className="text-muted-foreground">$/pack (sealed):</span>
-            <span className="font-mono font-medium ml-auto">
+            <span className="tabular-nums font-medium ml-auto">
               ${ppp.toFixed(2)}
             </span>
           </div>
@@ -115,7 +115,7 @@ function CustomTooltip({
               style={{ backgroundColor: "var(--color-loosePack)" }}
             />
             <span className="text-muted-foreground">Loose pack:</span>
-            <span className="font-mono font-medium ml-auto">
+            <span className="tabular-nums font-medium ml-auto">
               ${loose.toFixed(2)}
             </span>
           </div>
@@ -123,7 +123,7 @@ function CustomTooltip({
         <div className="border-t border-border/50 pt-1 mt-0.5">
           <span className="text-muted-foreground">Premium:</span>
           <span
-            className={`font-mono font-medium ml-2 ${
+            className={`tabular-nums font-medium ml-2 ${
               isSaving ? "text-green-400" : "text-red-400"
             }`}
           >
@@ -138,7 +138,7 @@ function CustomTooltip({
               {series} avg {item.productType === "Booster Box" ? "box" : "ETB"}:
             </span>
             <span
-              className={`font-mono font-medium ml-2 ${
+              className={`tabular-nums font-medium ml-2 ${
                 ppp <= item.eraAvgPricePerPack ? "text-green-400" : "text-red-400"
               }`}
             >
@@ -237,7 +237,7 @@ export function PackPremiumChart({ sets, initialSetId }: { sets: PackPremiumSetD
             <div className="mb-3 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-muted-foreground">
               <span>
                 Loose pack:{" "}
-                <span className="font-mono font-medium text-foreground">
+                <span className="tabular-nums font-medium text-foreground">
                   ${selectedSet.loosePackPrice.toFixed(2)}
                 </span>
                 <span className="ml-1">({selectedSet.loosePackName})</span>
@@ -248,7 +248,7 @@ export function PackPremiumChart({ sets, initialSetId }: { sets: PackPremiumSetD
                     <span key={type}>
                       {selectedSet.series} avg {getTypeLabel(type)}:{" "}
                       <span
-                        className={`font-mono font-medium ${
+                        className={`tabular-nums font-medium ${
                           avg.premium > 0 ? "text-red-400" : "text-green-400"
                         }`}
                       >

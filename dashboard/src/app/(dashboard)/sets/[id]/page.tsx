@@ -279,7 +279,7 @@ export default async function SetDetailPage({
           <div className="flex flex-wrap items-baseline gap-6">
             {set.total_set_value ? (
               <div>
-                <p className="text-3xl font-mono font-bold text-white drop-shadow-sm">
+                <p className="text-3xl tabular-nums font-bold text-white drop-shadow-sm">
                   {formatPrice(set.total_set_value)}
                 </p>
                 <p className="text-[11px] text-white/50 font-medium uppercase tracking-wider">
@@ -289,7 +289,7 @@ export default async function SetDetailPage({
             ) : null}
             {set.total_cards ? (
               <div>
-                <p className="text-2xl font-mono font-bold text-white">
+                <p className="text-2xl tabular-nums font-bold text-white">
                   {set.total_cards}
                 </p>
                 <p className="text-[11px] text-white/50 font-medium uppercase tracking-wider">
@@ -298,7 +298,7 @@ export default async function SetDetailPage({
               </div>
             ) : null}
             <div>
-              <p className="text-2xl font-mono font-bold text-white">
+              <p className="text-2xl tabular-nums font-bold text-white">
                 {products.length}
               </p>
               <p className="text-[11px] text-white/50 font-medium uppercase tracking-wider">
@@ -376,19 +376,19 @@ export default async function SetDetailPage({
                       <InfoTip label={<span className="text-xs text-muted-foreground">Price</span>} side="bottom">
                         Current TCGPlayer market price for this {primaryLabel.toLowerCase()}.
                       </InfoTip>
-                      <p className="font-mono font-semibold">{primaryProduct ? formatPrice(primaryProduct.current_price) : "--"}</p>
+                      <p className="tabular-nums font-semibold">{primaryProduct ? formatPrice(primaryProduct.current_price) : "--"}</p>
                     </div>
                     <div>
                       <InfoTip label={<span className="text-xs text-muted-foreground">EV</span>} side="bottom">
                         Expected value of all cards pulled from {primaryPacks} packs, calculated from pull rates and average card values per rarity.
                       </InfoTip>
-                      <p className="font-mono font-semibold">{formatPrice(primaryEv.boxEv)}</p>
+                      <p className="tabular-nums font-semibold">{formatPrice(primaryEv.boxEv)}</p>
                     </div>
                     <div>
                       <InfoTip label={<span className="text-xs text-muted-foreground">Rip Score</span>} side="bottom">
                         EV / Price. Above 1.0 = positive expected value (ripping is profitable on average). Below 1.0 = sealed product has a premium over raw card value.
                       </InfoTip>
-                      <p className={`font-mono font-bold ${primaryRipScore !== null ? getScoreColor(primaryRipScore) : ""}`}>
+                      <p className={`tabular-nums font-bold ${primaryRipScore !== null ? getScoreColor(primaryRipScore) : ""}`}>
                         {primaryRipScore?.toFixed(2) ?? "--"}
                       </p>
                     </div>
@@ -415,7 +415,7 @@ export default async function SetDetailPage({
                                 style={{ width: `${Math.min(pct, 100)}%` }}
                               />
                             </div>
-                            <span className="w-[55px] text-right font-mono">${b.ev.toFixed(2)}</span>
+                            <span className="w-[55px] text-right tabular-nums">${b.ev.toFixed(2)}</span>
                           </div>
                         );
                       })}
@@ -438,19 +438,19 @@ export default async function SetDetailPage({
                         <InfoTip label={<span className="text-xs text-muted-foreground">Price</span>} side="bottom">
                           Current TCGPlayer market price for this Elite Trainer Box.
                         </InfoTip>
-                        <p className="font-mono font-semibold">{etb ? formatPrice(etb.current_price) : "--"}</p>
+                        <p className="tabular-nums font-semibold">{etb ? formatPrice(etb.current_price) : "--"}</p>
                       </div>
                       <div>
                         <InfoTip label={<span className="text-xs text-muted-foreground">ETB EV</span>} side="bottom">
                           Expected value of all cards pulled from {etbPacks} packs, calculated from pull rates and average card values per rarity.
                         </InfoTip>
-                        <p className="font-mono font-semibold">{formatPrice(secondaryEv.boxEv)}</p>
+                        <p className="tabular-nums font-semibold">{formatPrice(secondaryEv.boxEv)}</p>
                       </div>
                       <div>
                         <InfoTip label={<span className="text-xs text-muted-foreground">Rip Score</span>} side="bottom">
                           ETB EV / Price. Above 1.0 = positive expected value. Below 1.0 = sealed product has a premium over raw card value.
                         </InfoTip>
-                        <p className={`font-mono font-bold ${secondaryRipScore !== null ? getScoreColor(secondaryRipScore) : ""}`}>
+                        <p className={`tabular-nums font-bold ${secondaryRipScore !== null ? getScoreColor(secondaryRipScore) : ""}`}>
                           {secondaryRipScore?.toFixed(2) ?? "--"}
                         </p>
                       </div>
@@ -512,13 +512,13 @@ export default async function SetDetailPage({
                     {rarityValues.map((rv) => (
                       <TableRow key={rv.id}>
                         <TableCell className="text-sm">{rv.rarity}</TableCell>
-                        <TableCell className="text-right font-mono text-sm">
+                        <TableCell className="text-right tabular-nums text-sm">
                           {rv.card_count}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-sm">
+                        <TableCell className="text-right tabular-nums text-sm">
                           {formatPrice(rv.total_value)}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-sm">
+                        <TableCell className="text-right tabular-nums text-sm">
                           {formatPrice(
                             rv.card_count > 0
                               ? rv.total_value / rv.card_count
@@ -557,10 +557,10 @@ export default async function SetDetailPage({
                     {pullRates.map((pr) => (
                       <TableRow key={pr.id}>
                         <TableCell className="text-sm">{pr.rarity}</TableCell>
-                        <TableCell className="text-right font-mono text-sm">
+                        <TableCell className="text-right tabular-nums text-sm">
                           {pr.packs_per_hit.toFixed(2)}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-sm">
+                        <TableCell className="text-right tabular-nums text-sm">
                           {pr.cards_in_set ?? "--"}
                         </TableCell>
                         <TableCell className="text-right text-xs text-muted-foreground">
@@ -617,20 +617,20 @@ export default async function SetDetailPage({
                     <TableCell className="text-sm text-muted-foreground">
                       {p.product_type}
                     </TableCell>
-                    <TableCell className="text-right font-mono">
+                    <TableCell className="text-right tabular-nums">
                       {formatPrice(p.current_price)}
                     </TableCell>
                     <TableCell
-                      className={`text-right font-mono text-sm ${getPctColor(p.price_change_7d_pct)}`}
+                      className={`text-right tabular-nums text-sm ${getPctColor(p.price_change_7d_pct)}`}
                     >
                       {formatPct(p.price_change_7d_pct)}
                     </TableCell>
                     <TableCell
-                      className={`text-right font-mono text-sm ${getPctColor(p.price_change_30d_pct)}`}
+                      className={`text-right tabular-nums text-sm ${getPctColor(p.price_change_30d_pct)}`}
                     >
                       {formatPct(p.price_change_30d_pct)}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-sm">
+                    <TableCell className="text-right tabular-nums text-sm">
                       {p.current_quantity != null
                         ? p.current_quantity.toLocaleString()
                         : "--"}

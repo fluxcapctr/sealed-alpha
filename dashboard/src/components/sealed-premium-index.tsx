@@ -133,13 +133,13 @@ export function SealedPremiumIndex({
                     <TableCell className="font-medium text-sm">
                       {row.setName}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-sm">
+                    <TableCell className="text-right tabular-nums text-sm">
                       ${row.productPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-sm">
+                    <TableCell className="text-right tabular-nums text-sm">
                       ${row.masterSet.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-sm">
+                    <TableCell className="text-right tabular-nums text-sm">
                       {(row.ratio * 100).toFixed(1)}%
                     </TableCell>
                     <TableCell

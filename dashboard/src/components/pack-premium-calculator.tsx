@@ -158,7 +158,7 @@ export function PackPremiumCalculator({
             {/* Loose pack reference */}
             <div className="rounded-md border border-border px-4 py-3">
               <p className="text-xs text-muted-foreground">Loose Pack Price</p>
-              <p className="text-lg font-mono font-bold">
+              <p className="text-lg tabular-nums font-bold">
                 {formatPrice(packPrice)}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -218,11 +218,11 @@ export function PackPremiumCalculator({
                         <p className="text-xs text-muted-foreground">
                           Price per Pack
                         </p>
-                        <p className={`text-lg font-mono font-bold ${textColor}`}>
+                        <p className={`text-lg tabular-nums font-bold ${textColor}`}>
                           {formatPrice(pricePerPack)}
                         </p>
                         {eraAvg !== null && (
-                          <p className="text-xs font-mono text-muted-foreground/60">
+                          <p className="text-xs tabular-nums text-muted-foreground/60">
                             {setProducts.series} avg: {formatPrice(eraAvg)}
                           </p>
                         )}
@@ -235,7 +235,7 @@ export function PackPremiumCalculator({
                         <span className="text-muted-foreground">
                           vs {setProducts.series} era avg
                         </span>
-                        <span className={`font-mono font-medium ${textColor}`}>
+                        <span className={`tabular-nums font-medium ${textColor}`}>
                           {isFavorable ? "Below avg" : "Above avg"}
                           {eraAvg !== null &&
                             ` (${pricePerPack < eraAvg ? "" : "+"}${formatPrice(pricePerPack - eraAvg)})`}

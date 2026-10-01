@@ -54,19 +54,19 @@ export default async function SignalsPage() {
       <div className="grid grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-green-400">{buys.length}</p>
+            <p className="text-2xl font-bold">{buys.length}</p>
             <p className="text-xs text-muted-foreground">Buy Signals</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-amber-400">{holds.length}</p>
+            <p className="text-2xl font-bold text-muted-foreground">{holds.length}</p>
             <p className="text-xs text-muted-foreground">Hold</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-red-400">{sells.length}</p>
+            <p className="text-2xl font-bold">{sells.length}</p>
             <p className="text-xs text-muted-foreground">Sell Signals</p>
           </CardContent>
         </Card>
@@ -120,20 +120,20 @@ export default async function SignalsPage() {
                     <TableCell className="text-sm text-muted-foreground">
                       {p.product_type}
                     </TableCell>
-                    <TableCell className="text-right font-mono">
+                    <TableCell className="text-right tabular-nums">
                       {formatPrice(p.current_price)}
                     </TableCell>
                     <TableCell
-                      className={`text-right font-mono text-sm ${getPctColor(p.price_change_30d_pct)}`}
+                      className={`text-right tabular-nums text-sm ${getPctColor(p.price_change_30d_pct)}`}
                     >
                       {formatPct(p.price_change_30d_pct)}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-sm">
+                    <TableCell className="text-right tabular-nums text-sm">
                       {p.current_quantity != null
                         ? p.current_quantity.toLocaleString()
                         : "--"}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-sm">
+                    <TableCell className="text-right tabular-nums text-sm">
                       {p.signal_score !== null
                         ? `${p.signal_score > 0 ? "+" : ""}${p.signal_score}`
                         : "--"}

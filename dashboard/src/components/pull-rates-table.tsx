@@ -236,7 +236,7 @@ export function PullRatesTable({ data }: { data: PullRateRow[] }) {
                     return (
                       <TableCell
                         key={col}
-                        className={`text-center font-mono text-xs px-2 ${getRateBg(rate.packsPerHit)}`}
+                        className={`text-center tabular-nums text-xs px-2 ${getRateBg(rate.packsPerHit)}`}
                         title={`${col}: 1 in ${rate.packsPerHit} packs${rate.cardsInSet ? ` (${rate.cardsInSet} cards)` : ""}`}
                       >
                         <span className={getRateColor(rate.packsPerHit)}>

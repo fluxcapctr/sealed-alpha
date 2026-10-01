@@ -4,22 +4,10 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Package,
-  Layers,
-  BarChart3,
-  Bell,
-  Menu,
-} from "lucide-react";
+import { LayoutDashboard, Package, Layers, BarChart3, Bell, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 const NAV_ITEMS = [
   { href: "/overview", label: "Overview", icon: LayoutDashboard },
@@ -34,51 +22,37 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <>
-      {/* Logo */}
-      <Link
-        href="/overview"
-        onClick={onNavigate}
-        className="flex items-center justify-center border-b border-border px-4 py-4"
-      >
-        <Image
-          src="/logo-sealed-alpha.png"
-          alt="Pokemon Sealed Tracker"
-          width={102}
-          height={131}
-          className="h-auto w-[102px] rotate-[20deg] transition-transform duration-200 hover:-translate-y-1"
-          priority
-        />
+      <Link href="/overview" onClick={onNavigate} className="flex h-10 items-center border-b border-border px-4">
+        <Image src="/sealed-alpha-wordmark.svg" alt="Sealed Alpha" width={140} height={20} className="h-[19px] w-auto" priority unoptimized />
       </Link>
 
-      {/* Nav */}
-      <nav className="flex-1 space-y-1 px-2 py-4">
+      <nav className="flex-1 space-y-0.5 px-2 py-3">
+        <p className="px-3 pb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">Markets</p>
         {NAV_ITEMS.map((item) => {
           const isActive = pathname.startsWith(item.href);
-
           return (
             <Link
               key={item.href}
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "relative flex items-center gap-3 rounded-sm px-3 py-2 text-[13px] font-medium transition-colors",
                 isActive
-                  ? "bg-primary/10 text-primary"
+                  ? "bg-primary/10 text-primary before:absolute before:left-0 before:top-1/2 before:h-4 before:w-[3px] before:-translate-y-1/2 before:bg-primary"
                   : "text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
             >
-              <item.icon className="h-4 w-4" />
+              <item.icon className="size-4" strokeWidth={1.75} />
               {item.label}
             </Link>
           );
         })}
       </nav>
 
-      {/* Footer */}
-      <div className="border-t border-border px-4 py-3">
-        <p className="text-[10px] text-muted-foreground">
-          Data from TCGPlayer
-        </p>
+      <div className="border-t border-border px-4 py-3 font-mono text-[10px] uppercase leading-relaxed tracking-wider text-muted-foreground">
+        Source TCGPlayer
+        <br />
+        Not investment advice
       </div>
     </>
   );
@@ -86,7 +60,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
 export function Sidebar() {
   return (
-    <aside className="hidden md:flex h-screen w-56 flex-col border-r border-border bg-card">
+    <aside className="hidden h-screen w-52 shrink-0 flex-col border-r border-border bg-sidebar md:flex">
       <SidebarContent />
     </aside>
   );
@@ -97,31 +71,17 @@ export function MobileSidebar() {
 
   return (
     <>
-      {/* Fixed top bar on mobile */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center border-b border-border bg-card px-4 h-14">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setOpen(true)}
-        >
-          <Menu className="h-5 w-5" />
+      <div className="fixed left-0 right-0 top-0 z-40 flex h-12 items-center border-b border-border bg-sidebar px-3 md:hidden">
+        <Button variant="ghost" size="icon" onClick={() => setOpen(true)}>
+          <Menu className="size-5" />
           <span className="sr-only">Open menu</span>
         </Button>
         <Link href="/overview" className="ml-2">
-          <Image
-            src="/logo-sealed-alpha.png"
-            alt="Sealed Alpha"
-            width={32}
-            height={41}
-            className="h-8 w-auto rotate-[20deg]"
-            unoptimized
-          />
+          <Image src="/sealed-alpha-wordmark.svg" alt="Sealed Alpha" width={120} height={16} className="h-[16px] w-auto" unoptimized />
         </Link>
       </div>
-
-      {/* Sheet overlay */}
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="left" className="w-56 p-0 bg-card">
+        <SheetContent side="left" className="w-56 bg-sidebar p-0">
           <SheetHeader className="sr-only">
             <SheetTitle>Navigation</SheetTitle>
           </SheetHeader>
