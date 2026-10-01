@@ -18,6 +18,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { InfoTip } from "@/components/info-tip";
 import { SetScoreCard } from "@/components/set-score-card";
+import { Breadcrumb, languageCrumb } from "@/components/breadcrumb";
 import type { ProductAnalytics, SetRarityValue, PullRate, SetScore } from "@/types/database";
 
 export const revalidate = 300;
@@ -241,6 +242,8 @@ export default async function SetDetailPage({
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[languageCrumb(set.language), { label: set.name }]} />
+
       {/* Hero Header */}
       <div className="relative overflow-hidden rounded-xl border border-border">
         {set.top_card_image_url ? (

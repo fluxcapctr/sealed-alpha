@@ -11,6 +11,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProductThumb } from "@/components/product-thumb";
 import { InfoTip } from "@/components/info-tip";
+import { Breadcrumb, languageCrumb } from "@/components/breadcrumb";
 import type { ProductAnalytics, PriceSnapshot, Signal, SalesSnapshot } from "@/types/database";
 
 export const revalidate = 300;
@@ -102,6 +103,14 @@ export default async function ProductDetailPage({
 
   return (
     <div className="space-y-6">
+      <Breadcrumb
+        items={[
+          languageCrumb(product.language),
+          { label: product.set_name, href: `/sets/${product.set_id}` },
+          { label: product.product_name },
+        ]}
+      />
+
       {/* Header */}
       <div className="grid gap-5 sm:grid-cols-[auto_minmax(0,1fr)] lg:grid-cols-[auto_minmax(0,1fr)_auto]">
         <div className="flex h-44 w-44 items-center justify-center rounded-md border bg-card dot-grid">
