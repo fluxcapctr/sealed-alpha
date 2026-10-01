@@ -6,28 +6,28 @@
 -- ============================================
 
 -- Products
-CREATE INDEX idx_products_set_id ON products(set_id);
-CREATE INDEX idx_products_type ON products(product_type);
-CREATE INDEX idx_products_active ON products(is_active) WHERE is_active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_products_set_id ON products(set_id);
+CREATE INDEX IF NOT EXISTS idx_products_type ON products(product_type);
+CREATE INDEX IF NOT EXISTS idx_products_active ON products(is_active) WHERE is_active = TRUE;
 
 -- Price snapshots (critical for time-series queries)
-CREATE INDEX idx_price_snapshots_product_date ON price_snapshots(product_id, snapshot_date DESC);
-CREATE INDEX idx_price_snapshots_date ON price_snapshots(snapshot_date DESC);
+CREATE INDEX IF NOT EXISTS idx_price_snapshots_product_date ON price_snapshots(product_id, snapshot_date DESC);
+CREATE INDEX IF NOT EXISTS idx_price_snapshots_date ON price_snapshots(snapshot_date DESC);
 
 -- Sales snapshots
-CREATE INDEX idx_sales_snapshots_product_date ON sales_snapshots(product_id, snapshot_date DESC);
+CREATE INDEX IF NOT EXISTS idx_sales_snapshots_product_date ON sales_snapshots(product_id, snapshot_date DESC);
 
 -- Signals
-CREATE INDEX idx_signals_product_date ON signals(product_id, signal_date DESC);
-CREATE INDEX idx_signals_score ON signals(composite_score DESC);
+CREATE INDEX IF NOT EXISTS idx_signals_product_date ON signals(product_id, signal_date DESC);
+CREATE INDEX IF NOT EXISTS idx_signals_score ON signals(composite_score DESC);
 
 -- Alerts
-CREATE INDEX idx_alerts_product ON alerts(product_id);
-CREATE INDEX idx_alerts_unsent ON alerts(is_sent) WHERE is_sent = FALSE;
-CREATE INDEX idx_alerts_type ON alerts(alert_type);
+CREATE INDEX IF NOT EXISTS idx_alerts_product ON alerts(product_id);
+CREATE INDEX IF NOT EXISTS idx_alerts_unsent ON alerts(is_sent) WHERE is_sent = FALSE;
+CREATE INDEX IF NOT EXISTS idx_alerts_type ON alerts(alert_type);
 
 -- Sets
-CREATE INDEX idx_sets_release ON sets(release_date DESC);
+CREATE INDEX IF NOT EXISTS idx_sets_release ON sets(release_date DESC);
 
 -- ============================================
 -- PRODUCT ANALYTICS MATERIALIZED VIEW
@@ -35,6 +35,8 @@ CREATE INDEX idx_sets_release ON sets(release_date DESC);
 -- Pre-computes analytics for each product to avoid expensive
 -- aggregation queries on every dashboard page load.
 -- Refreshed after each daily scrape run.
+
+DROP MATERIALIZED VIEW IF EXISTS product_analytics;
 
 CREATE MATERIALIZED VIEW product_analytics AS
 SELECT

@@ -1,10 +1,13 @@
 -- Migration 010b: Recreate product_analytics view with language column
 -- Run this in Supabase SQL Editor
--- (The DROP already ran successfully, so we just need the CREATE)
+-- (Originally the DROP lived in 010 and this file was only the CREATE. 010 also
+-- creates the view, so a replay from an empty database needs the DROP here too.)
 
 -- First verify tables exist
 -- SELECT count(*) FROM public.sets;
 -- SELECT count(*) FROM public.products;
+
+DROP MATERIALIZED VIEW IF EXISTS public.product_analytics;
 
 CREATE MATERIALIZED VIEW public.product_analytics AS
 SELECT
@@ -230,9 +233,10 @@ LEFT JOIN LATERAL (
 WHERE p.is_active = TRUE;
 
 -- Recreate unique index for CONCURRENTLY refresh
-CREATE UNIQUE INDEX idx_product_analytics_id ON public.product_analytics(product_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_product_analytics_id ON public.product_analytics(product_id);
 
--- Grant read access to anon role (needed for dashboard)
+-- Grant read access to anon role (needed for dashboard).
+-- A DROP + CREATE of the view discards its grants, so these MUST follow every recreate.
 GRANT SELECT ON public.product_analytics TO anon;
 GRANT SELECT ON public.product_analytics TO authenticated;
 
