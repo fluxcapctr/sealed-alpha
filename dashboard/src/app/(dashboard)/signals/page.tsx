@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { SignalBadge } from "@/components/signal-badge";
 import { formatPrice, formatPct, getPctColor } from "@/lib/signals";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,14 +19,16 @@ export const revalidate = 300;
 export default async function SignalsPage() {
   const supabase = await createClient();
 
-  const { data: analytics } = await supabase
-    .from("product_analytics")
-    .select("*")
-    .not("signal_score", "is", null)
-    .order("signal_score", { ascending: false })
-    .returns<ProductAnalytics[]>();
-
-  const products = analytics ?? [];
+  const products = await fetchAll<ProductAnalytics>((from, to) =>
+    supabase
+      .from("product_analytics")
+      .select("*")
+      .not("signal_score", "is", null)
+      .order("signal_score", { ascending: false })
+      .order("product_id")
+      .range(from, to)
+      .returns<ProductAnalytics[]>()
+  );
 
   const buys = products.filter(
     (p) =>

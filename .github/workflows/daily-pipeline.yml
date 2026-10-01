@@ -6,6 +6,16 @@ on:
     - cron: "0 8 * * *"
   workflow_dispatch: # Allow manual triggers
 
+# Never run two at once: a manual dispatch overlapping the cron run could
+# otherwise double-send drip emails or race on the same snapshot rows.
+concurrency:
+  group: daily-pipeline
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write # only used by the keep-alive step below
+
 jobs:
   daily-run:
     runs-on: ubuntu-latest
@@ -18,10 +28,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: pip
 
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # tools/run_daily.py exits non-zero when prices/coverage/analytics/signals/drip
+      # had problems, so this step (and the run) goes red and GitHub notifies you.
       - name: Run daily pipeline
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -38,3 +51,13 @@ jobs:
           name: daily-run-log-${{ github.run_number }}
           path: .tmp/daily_run_log.json
           retention-days: 30
+
+      # GitHub disables scheduled workflows in public repos after 60 days without
+      # repository activity (this one was disabled that way in 2026-07). Re-enabling
+      # the workflow on every run is the documented workaround; if the schedule still
+      # stops, a commit to the repo also resets the timer.
+      - name: Keep scheduled runs alive
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow enable daily-pipeline.yml --repo "$GITHUB_REPOSITORY"

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { SignalMeter } from "@/components/signal-meter";
 import { Sparkline } from "@/components/sparkline";
 import { ProductHoverImage } from "@/components/product-hover-image";
@@ -18,12 +19,15 @@ const median = (xs: number[]) => {
 
 export default async function OverviewPage() {
   const supabase = await createClient();
-  const { data: analytics } = await supabase
-    .from("product_analytics")
-    .select("*")
-    .order("current_price", { ascending: false })
-    .returns<ProductAnalytics[]>();
-  const products = analytics ?? [];
+  const products = await fetchAll<ProductAnalytics>((from, to) =>
+    supabase
+      .from("product_analytics")
+      .select("*")
+      .order("current_price", { ascending: false })
+      .order("product_id")
+      .range(from, to)
+      .returns<ProductAnalytics[]>()
+  );
   const asOf = getAsOf(products);
 
   const isBuy = (p: ProductAnalytics) => p.signal_recommendation === "BUY" || p.signal_recommendation === "STRONG_BUY";

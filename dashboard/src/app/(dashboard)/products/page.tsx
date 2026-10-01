@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { fetchAll } from "@/lib/supabase/fetch-all";
+import { isUuid } from "@/lib/uuid";
 import { SignalMeter } from "@/components/signal-meter";
 import { Sparkline } from "@/components/sparkline";
 import { getAsOf, getSeries, typeCode } from "@/lib/market";
@@ -112,7 +114,8 @@ export default async function ProductsPage({
   const { data: allSets } = await supabase
     .from("sets")
     .select("id, name, series")
-    .order("release_date", { ascending: false });
+    .order("release_date", { ascending: false })
+    .throwOnError();
 
   const setsForFilter = (allSets ?? []).map((s) => ({
     value: s.id,
@@ -129,36 +132,44 @@ export default async function ProductsPage({
     ? setsForFilter.filter((s) => s.series === params.series)
     : setsForFilter;
 
-  // Build main query
-  let query = supabase.from("product_analytics").select("*");
+  // A malformed set id can never match (and Postgres errors on a bad UUID), so
+  // treat it as "no results" instead of failing the page.
+  const invalidSetFilter = Boolean(params.set) && !isUuid(params.set);
 
-  if (params.type) {
-    query = query.eq("product_type", params.type);
-  }
-  if (params.set) {
-    query = query.eq("set_id", params.set);
-  }
-  if (params.series) {
-    query = query.eq("series", params.series);
-  }
-  if (params.signal) {
-    query = query.eq("signal_recommendation", params.signal);
-  }
-  if (params.lang) {
-    query = query.eq("language", params.lang);
-  }
-  if (params.q) {
-    query = query.ilike("product_name", `%${params.q}%`);
-  }
+  // Build main query (fresh builder per call, since fetchAll pages through it)
+  const buildFilteredQuery = () => {
+    let query = supabase.from("product_analytics").select("*");
+
+    if (params.type) {
+      query = query.eq("product_type", params.type);
+    }
+    if (params.set) {
+      query = query.eq("set_id", params.set);
+    }
+    if (params.series) {
+      query = query.eq("series", params.series);
+    }
+    if (params.signal) {
+      query = query.eq("signal_recommendation", params.signal);
+    }
+    if (params.lang) {
+      query = query.eq("language", params.lang);
+    }
+    if (params.q) {
+      query = query.ilike("product_name", `%${params.q}%`);
+    }
+    return query;
+  };
 
   // Fetch set info for header when filtered by set
   let setInfo: Set | null = null;
-  if (params.set) {
+  if (params.set && !invalidSetFilter) {
     const { data: setData } = await supabase
       .from("sets")
       .select("*")
       .eq("id", params.set)
-      .limit(1);
+      .limit(1)
+      .throwOnError();
     setInfo = setData?.[0] ?? null;
   }
 
@@ -169,14 +180,19 @@ export default async function ProductsPage({
     : "release_date";
   const ascending = params.dir === "asc";
 
-  const { data: products } = await query
-    .order(sortField, {
-      ascending,
-      nullsFirst: false,
-    })
-    .returns<ProductAnalytics[]>();
+  const items: ProductAnalytics[] = invalidSetFilter
+    ? []
+    : await fetchAll<ProductAnalytics>((from, to) =>
+        buildFilteredQuery()
+          .order(sortField, {
+            ascending,
+            nullsFirst: false,
+          })
+          .order("product_id") // unique tiebreaker so pages never skip/duplicate rows
+          .range(from, to)
+          .returns<ProductAnalytics[]>()
+      );
 
-  const items = products ?? [];
   const asOf = getAsOf(items);
   const trend = asOf ? await getSeries(supabase, items.slice(0, 120).map((p) => p.product_id), asOf, 30) : new Map();
 
@@ -187,10 +203,14 @@ export default async function ProductsPage({
   // If we don't have type options from filtered data, fetch all types
   let allTypeOptions = typeOptions;
   if (params.type || params.set || params.series) {
-    const { data: allProducts } = await supabase
-      .from("product_analytics")
-      .select("product_type");
-    const allTypes = [...new Set((allProducts ?? []).map((p) => p.product_type))].sort();
+    const allProducts = await fetchAll((from, to) =>
+      supabase
+        .from("product_analytics")
+        .select("product_type")
+        .order("product_id")
+        .range(from, to)
+    );
+    const allTypes = [...new Set(allProducts.map((p) => p.product_type))].sort();
     allTypeOptions = allTypes.map((t) => ({ value: t, label: t }));
   }
 

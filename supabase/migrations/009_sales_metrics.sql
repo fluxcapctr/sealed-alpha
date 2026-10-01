@@ -2,13 +2,25 @@
 -- Source: TCGPlayer price history API (range=quarter)
 -- Updated by: tools/scrape_sales_data.py
 
--- Add Booster Bundle to the product_type CHECK constraint
-ALTER TABLE products DROP CONSTRAINT IF EXISTS products_product_type_check;
-ALTER TABLE products ADD CONSTRAINT products_product_type_check
-  CHECK (product_type IN (
-    'Booster Box', 'Elite Trainer Box', 'Pokemon Center Elite Trainer Box',
-    'Booster Pack', 'Booster Bundle', 'Collection Box', 'Other'
-  ));
+-- Add Booster Bundle to the product_type CHECK constraint.
+-- (Replay note: skipped when the constraint already allows 'Booster Bundle', so
+-- re-running this file never narrows the wider list installed by migration 013.)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.products'::regclass
+      AND conname = 'products_product_type_check'
+      AND pg_get_constraintdef(oid) LIKE '%Booster Bundle%'
+  ) THEN
+    ALTER TABLE products DROP CONSTRAINT IF EXISTS products_product_type_check;
+    ALTER TABLE products ADD CONSTRAINT products_product_type_check
+      CHECK (product_type IN (
+        'Booster Box', 'Elite Trainer Box', 'Pokemon Center Elite Trainer Box',
+        'Booster Pack', 'Booster Bundle', 'Collection Box', 'Other'
+      ));
+  END IF;
+END $$;
 
 -- Add sales metrics columns
 ALTER TABLE products

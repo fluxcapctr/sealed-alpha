@@ -36,6 +36,7 @@ export type Database = {
           total_products?: number;
           total_set_value?: number | null;
           total_cards?: number | null;
+          set_value_updated_at?: string | null;
           top_card_image_url?: string | null;
           language?: string;
         };
@@ -53,18 +54,11 @@ export type Database = {
           total_products?: number;
           total_set_value?: number | null;
           total_cards?: number | null;
+          set_value_updated_at?: string | null;
           top_card_image_url?: string | null;
           language?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "products_set_id_fkey";
-            columns: ["id"];
-            isOneToOne: false;
-            referencedRelation: "products";
-            referencedColumns: ["set_id"];
-          },
-        ];
+        Relationships: [];
       };
       products: {
         Row: {
@@ -79,6 +73,8 @@ export type Database = {
           msrp: number | null;
           is_active: boolean;
           language: string;
+          total_sold_90d: number | null;
+          avg_daily_sold: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -94,6 +90,8 @@ export type Database = {
           msrp?: number | null;
           is_active?: boolean;
           language?: string;
+          total_sold_90d?: number | null;
+          avg_daily_sold?: number | null;
         };
         Update: {
           id?: string;
@@ -107,6 +105,8 @@ export type Database = {
           msrp?: number | null;
           is_active?: boolean;
           language?: string;
+          total_sold_90d?: number | null;
+          avg_daily_sold?: number | null;
         };
         Relationships: [
           {
@@ -274,6 +274,7 @@ export type Database = {
           signal_score: number | null;
           is_sent: boolean;
           sent_at: string | null;
+          alert_date: string;
           created_at: string;
         };
         Insert: {
@@ -284,6 +285,7 @@ export type Database = {
           signal_score?: number | null;
           is_sent?: boolean;
           sent_at?: string | null;
+          alert_date?: string;
         };
         Update: {
           id?: string;
@@ -293,6 +295,7 @@ export type Database = {
           signal_score?: number | null;
           is_sent?: boolean;
           sent_at?: string | null;
+          alert_date?: string;
         };
         Relationships: [
           {
@@ -415,7 +418,15 @@ export type Database = {
           chase_card_name?: string | null;
           notes?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "set_scores_set_id_fkey";
+            columns: ["set_id"];
+            isOneToOne: true;
+            referencedRelation: "sets";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       drip_subscribers: {
         Row: {
@@ -474,7 +485,15 @@ export type Database = {
           sent_at?: string;
           resend_id?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "drip_log_subscriber_id_fkey";
+            columns: ["subscriber_id"];
+            isOneToOne: false;
+            referencedRelation: "drip_subscribers";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       user_settings: {
         Row: {

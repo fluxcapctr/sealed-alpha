@@ -12,17 +12,29 @@ load_dotenv(ENV_PATH)
 PROJECT_ROOT = Path(__file__).parent
 
 
+def _env(name: str, default: str = "") -> str:
+    """Read an env var, treating unset AND empty/blank as 'use the default'.
+
+    GitHub Actions passes an unset secret as an empty string, which os.getenv()
+    returns as-is instead of applying its default.
+    """
+    value = os.getenv(name)
+    if value is None or not value.strip():
+        return default
+    return value.strip()
+
+
 @dataclass
 class Config:
     # Supabase
     supabase_url: str = field(
-        default_factory=lambda: os.getenv("SUPABASE_URL", "")
+        default_factory=lambda: _env("SUPABASE_URL")
     )
     supabase_anon_key: str = field(
-        default_factory=lambda: os.getenv("SUPABASE_ANON_KEY", "")
+        default_factory=lambda: _env("SUPABASE_ANON_KEY")
     )
     supabase_service_role_key: str = field(
-        default_factory=lambda: os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+        default_factory=lambda: _env("SUPABASE_SERVICE_ROLE_KEY")
     )
 
     # Timeouts
@@ -31,10 +43,10 @@ class Config:
 
     # Rate limiting
     request_delay: float = field(
-        default_factory=lambda: float(os.getenv("REQUEST_DELAY", "2.0"))
+        default_factory=lambda: float(_env("REQUEST_DELAY", "2.0"))
     )
     max_retries: int = field(
-        default_factory=lambda: int(os.getenv("MAX_RETRIES", "3"))
+        default_factory=lambda: int(_env("MAX_RETRIES", "3"))
     )
     retry_backoff_base: float = 2.0
 
@@ -48,7 +60,7 @@ class Config:
 
     # Proxy
     proxy_url: str | None = field(
-        default_factory=lambda: os.getenv("PROXY_URL") or None
+        default_factory=lambda: _env("PROXY_URL") or None
     )
 
     # Paths
@@ -89,29 +101,53 @@ class Config:
     new_set_threshold_days: int = 365
     old_set_threshold_days: int = 1095
 
+    # Pipeline health: fraction of in-scope active products that must get a price
+    # snapshot on a daily run, and of set queries that may fail, before the run
+    # is reported as failed (non-zero exit).
+    min_price_coverage: float = field(
+        default_factory=lambda: float(_env("MIN_PRICE_COVERAGE", "0.85"))
+    )
+    max_failed_query_fraction: float = 0.25
+
     # Logging
     log_level: str = field(
-        default_factory=lambda: os.getenv("LOG_LEVEL", "INFO")
+        default_factory=lambda: _env("LOG_LEVEL", "INFO")
     )
 
     # Email (Phase 5)
     resend_api_key: str = field(
-        default_factory=lambda: os.getenv("RESEND_API_KEY", "")
+        default_factory=lambda: _env("RESEND_API_KEY")
     )
     alert_email: str = field(
-        default_factory=lambda: os.getenv("ALERT_EMAIL", "")
+        default_factory=lambda: _env("ALERT_EMAIL")
     )
 
     # Drip Campaign
     wholesale_url: str = field(
-        default_factory=lambda: os.getenv("WHOLESALE_URL", "https://kitakamicards.com")
+        default_factory=lambda: _env("WHOLESALE_URL", "https://kitakamicards.com")
     )
     drip_sender_email: str = field(
-        default_factory=lambda: os.getenv("DRIP_SENDER_EMAIL", "onboarding@resend.dev")
+        default_factory=lambda: _env("DRIP_SENDER_EMAIL", "onboarding@resend.dev")
     )
 
     def __post_init__(self):
         self.tmp_dir.mkdir(parents=True, exist_ok=True)
+
+    def require_supabase(self) -> None:
+        """Fail fast with a readable message instead of an obscure client error."""
+        missing = [
+            name
+            for name, value in (
+                ("SUPABASE_URL", self.supabase_url),
+                ("SUPABASE_SERVICE_ROLE_KEY", self.supabase_service_role_key),
+            )
+            if not value
+        ]
+        if missing:
+            raise RuntimeError(
+                f"Missing required environment variable(s): {', '.join(missing)}. "
+                "Set them in .env (see .env.example) or the CI secrets."
+            )
 
     def random_user_agent(self) -> str:
         return random.choice(self.user_agents)

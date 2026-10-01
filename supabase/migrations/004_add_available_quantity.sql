@@ -3,7 +3,7 @@
 -- Tracks the total units available across all sellers (from TCGPlayer listings API)
 
 -- Add available_quantity column
-ALTER TABLE price_snapshots ADD COLUMN available_quantity INTEGER;
+ALTER TABLE price_snapshots ADD COLUMN IF NOT EXISTS available_quantity INTEGER;
 
 -- Drop and recreate the materialized view with quantity columns
 DROP MATERIALIZED VIEW IF EXISTS product_analytics;

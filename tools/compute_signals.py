@@ -342,6 +342,53 @@ def check_for_alerts(
     return alerts
 
 
+def compute_and_store_signals(
+    db: Database, analytics_list: list[dict], dry_run: bool = False
+) -> dict:
+    """
+    Compute a signal for every priced product, store them, and raise alerts.
+
+    Shared by the daily pipeline and the CLI so both behave the same:
+    - yesterday's signals are loaded in bulk, so Hold -> Buy/Sell crossings can fire
+      (the pipeline used to pass no previous signal, so they never did);
+    - signals are written in bulk, alerts at most once per product/type per day.
+
+    Returns {"computed", "alerts", "failed", "signals"}.
+    """
+    today = str(date.today())
+    previous = {} if dry_run else db.get_previous_signals(before=today)
+
+    signals: list[Signal] = []
+    alerts: list[Alert] = []
+    for analytics in analytics_list:
+        if analytics.get("current_price") is None:
+            continue  # no price today -> no signal
+
+        signal = compute_signal(analytics)
+        signals.append(signal)
+
+        prev_row = previous.get(signal.product_id)
+        prev = None
+        if prev_row:
+            prev = Signal(
+                product_id=signal.product_id,
+                recommendation=prev_row.get("recommendation") or "HOLD",
+                composite_score=float(prev_row.get("composite_score") or 0),
+            )
+        alerts.extend(check_for_alerts(signal, prev, analytics))
+
+    result = {"computed": len(signals), "alerts": 0, "failed": 0, "signals": signals}
+    if dry_run:
+        result["alerts"] = len(alerts)
+        return result
+
+    written, failed_rows = db.upsert_signals(signals)
+    result["computed"] = written
+    result["failed"] = len(failed_rows)
+    result["alerts"] = db.create_alerts(alerts)
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description="Compute buy/sell signals")
     parser.add_argument("--product-id", help="Compute for a specific product")
@@ -360,52 +407,15 @@ def main():
 
     logger.info(f"Computing signals for {len(analytics_list)} products...")
 
-    results = {"computed": 0, "alerts_created": 0}
-    all_signals = []
+    outcome = compute_and_store_signals(db, analytics_list, dry_run=args.dry_run)
+    all_signals = outcome["signals"]
+    results = {"computed": outcome["computed"], "alerts_created": outcome["alerts"]}
 
-    for analytics in analytics_list:
-        # Skip products with no price data
-        if analytics.get("current_price") is None:
-            continue
-
-        signal = compute_signal(analytics)
-        all_signals.append(signal)
-
-        if args.dry_run:
-            logger.info(
-                f"  {analytics.get('product_name', '?')}: "
-                f"score={signal.composite_score:+.1f} → {signal.recommendation}"
-            )
-            results["computed"] += 1
-            continue
-
-        # Get previous signal for alert comparison
-        prev_signals = db.get_latest_signals(limit=1)
-        prev = None
-        for ps in prev_signals:
-            if ps.get("product_id") == signal.product_id:
-                prev = Signal(
-                    product_id=ps["product_id"],
-                    recommendation=ps.get("recommendation", "HOLD"),
-                    composite_score=ps.get("composite_score", 0),
-                )
-                break
-
-        # Save signal
-        db.upsert_signal(signal)
-        results["computed"] += 1
-
-        # Check for alerts
-        alerts = check_for_alerts(signal, prev, analytics)
-        for alert in alerts:
-            db.create_alert(alert)
-            results["alerts_created"] += 1
-            logger.info(f"  ALERT: {alert.message}")
-
-        logger.info(
-            f"  {analytics.get('product_name', '?')}: "
-            f"score={signal.composite_score:+.1f} → {signal.recommendation}"
-        )
+    if args.dry_run:
+        by_product = {a["product_id"]: a for a in analytics_list}
+        for signal in all_signals:
+            name = by_product[signal.product_id].get("product_name", "?")
+            logger.info(f"  {name}: score={signal.composite_score:+.1f} → {signal.recommendation}")
 
     # Save results summary
     output = {

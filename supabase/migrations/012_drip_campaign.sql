@@ -1,8 +1,13 @@
 -- Migration 012: Drip email campaign tables
 -- Run in Supabase Dashboard SQL Editor
+--
+-- NOTE: the policies and the GRANT to `authenticated` below are superseded by
+-- migration 013, which restricts both tables to service_role. They are kept here
+-- as historically applied. Apply 013 after this file (and again after any re-run
+-- of 012).
 
 -- Track users for drip campaigns (accessible via PostgREST, unlike auth.users)
-CREATE TABLE public.drip_subscribers (
+CREATE TABLE IF NOT EXISTS public.drip_subscribers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email TEXT NOT NULL UNIQUE,
     signup_date DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -16,6 +21,7 @@ CREATE TABLE public.drip_subscribers (
 
 -- RLS
 ALTER TABLE public.drip_subscribers ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Service role full access" ON public.drip_subscribers;
 CREATE POLICY "Service role full access" ON public.drip_subscribers FOR ALL USING (true);
 
 -- Grants
@@ -23,7 +29,7 @@ GRANT ALL ON public.drip_subscribers TO service_role;
 GRANT SELECT ON public.drip_subscribers TO authenticated;
 
 -- Drip send log (for debugging / analytics)
-CREATE TABLE public.drip_log (
+CREATE TABLE IF NOT EXISTS public.drip_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     subscriber_id UUID NOT NULL REFERENCES public.drip_subscribers(id) ON DELETE CASCADE,
     step INTEGER NOT NULL,
@@ -33,5 +39,6 @@ CREATE TABLE public.drip_log (
 );
 
 ALTER TABLE public.drip_log ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Service role full access" ON public.drip_log;
 CREATE POLICY "Service role full access" ON public.drip_log FOR ALL USING (true);
 GRANT ALL ON public.drip_log TO service_role;

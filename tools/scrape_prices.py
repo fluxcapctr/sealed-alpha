@@ -27,6 +27,15 @@ import httpx
 from config import Config
 from db import Database
 from models import PriceSnapshot
+from tools.tcgplayer import (
+    TcgPlayerError,
+    clean_count,
+    clean_price,
+    fetch_listing_quantity,
+    fetch_pricepoints,
+    product_line_for,
+    search_sealed,
+)
 
 logger = logging.getLogger("scrape_prices")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -182,7 +191,7 @@ def parse_price_response(product_id: str, data: dict | list) -> PriceSnapshot | 
     if isinstance(data, list) and len(data) > 0:
         # Array of price points — find the "Normal" or first entry
         for pp in data:
-            if pp.get("printingType", "").lower() == "normal" or len(data) == 1:
+            if (pp.get("printingType") or "").lower() == "normal" or len(data) == 1:
                 snapshot.market_price = pp.get("marketPrice")
                 snapshot.low_price = pp.get("lowPrice")
                 snapshot.mid_price = pp.get("midPrice")
@@ -218,238 +227,222 @@ def parse_dollar_amount(text: str) -> float | None:
         return None
 
 
-TCGPLAYER_SEARCH_API = "https://mp-search-api.tcgplayer.com/v1/search/request"
+# Products we hold but TCGPlayer's fuzzy set search did not return are priced one by
+# one from the pricepoints endpoint. Cap it so a broken search can't turn the daily
+# run into thousands of single requests.
+MAX_FALLBACK_PRODUCTS = 150
+# After this many quantity requests in a row fail, assume we are blocked and stop.
+MAX_CONSECUTIVE_QUANTITY_FAILURES = 15
+
+
+def snapshot_from_search_item(product_id: str, item: dict, snapshot_date: str) -> PriceSnapshot | None:
+    """
+    Build a snapshot from one search-result item, or None if it carries no usable price.
+
+    - market_price is TCGPlayer's market price (identical to /pricepoints).
+    - low_price is the cheapest single listing and can be an outlier, so the listed
+      median is stored alongside it (the batch path used to drop it).
+    - total_listings keeps 0 as 0; only a missing value is None.
+    """
+    market = clean_price(item.get("marketPrice"))
+    low = clean_price(item.get("lowestPrice"))
+    if market is None and low is None:
+        return None
+    return PriceSnapshot(
+        product_id=product_id,
+        snapshot_date=snapshot_date,
+        market_price=market,
+        low_price=low,
+        listed_median_price=clean_price(item.get("medianPrice")),
+        total_listings=clean_count(item.get("totalListings")),
+    )
 
 
 async def scrape_prices_batch(db: Database, config: Config, set_filter: str | None = None) -> dict:
     """
-    Batch-scrape prices using the TCGPlayer search API.
+    Price every active product, ~1 search per set instead of 1 request per product.
 
-    Instead of one API call per product (753 calls), this queries by set name
-    and matches returned products by tcgplayer_product_id (~63 calls total).
+    Each set is searched by name (fuzzy) and results are matched to our products by
+    tcgplayer_product_id, so a price can never land on the wrong product. Because the
+    search is fuzzy, a set whose name is generic ("Sword & Shield") can have more
+    matches than one page, and a product can be missed entirely. This therefore:
+      1. pages through up to 4 pages of results per set,
+      2. prices any active product that no search returned via /pricepoints,
+      3. writes all snapshots in bulk, and
+      4. reports coverage (priced / expected) so the caller can fail loudly.
     """
     sets = db.get_sets()
     if set_filter:
         sets = [s for s in sets if s["id"] == set_filter]
 
-    results = {"success": 0, "failed": 0, "skipped": 0, "sets_processed": 0}
-    today = str(date.today())
-
-    # Build lookup: tcgplayer_product_id -> product row
     all_products = db.get_products(is_active=True)
-    tcg_id_to_product = {}
+    if set_filter:
+        all_products = [p for p in all_products if p.get("set_id") == set_filter]
+
+    tcg_id_to_product: dict[int, dict] = {}
     for p in all_products:
-        tcg_id = p.get("tcgplayer_product_id")
+        tcg_id = clean_count(p.get("tcgplayer_product_id"))
         if tcg_id:
-            tcg_id_to_product[int(tcg_id)] = p
+            tcg_id_to_product[tcg_id] = p
+
+    today = str(date.today())
+    snapshots: dict[str, PriceSnapshot] = {}  # product_id -> snapshot (one per product per day)
+    seen_ids: set[int] = set()                # products TCGPlayer returned, priced or not
+    results = {
+        "success": 0, "failed": 0, "skipped": 0, "sets_processed": 0,
+        "queries_failed": 0, "truncated_queries": 0, "fallback_priced": 0,
+    }
 
     logger.info(f"Batch scraping prices for {len(sets)} sets ({len(tcg_id_to_product)} products)...")
-
-    def make_payload(product_line: str) -> dict:
-        return {
-            "algorithm": "sales_synonym_v2",
-            "from": 0,
-            "size": 50,
-            "filters": {
-                "term": {
-                    "productLineName": [product_line],
-                    "productTypeName": ["Sealed Products"],
-                },
-                "range": {},
-                "match": {},
-            },
-            "listingSearch": {
-                "filters": {
-                    "term": {},
-                    "range": {},
-                    "exclude": {"channelExclusion": 0},
-                }
-            },
-            "context": {"cart": {}, "shippingCountry": "US", "userProfile": {}},
-            "settings": {"useFuzzySearch": True, "didYouMean": {}},
-            "sort": {},
-        }
 
     async with httpx.AsyncClient(timeout=config.httpx_timeout) as client:
         for i, set_data in enumerate(sets):
             set_name = set_data["name"]
-            lang = set_data.get("language", "en")
-            product_line = "pokemon-japan" if lang == "ja" else "pokemon"
-            logger.info(f"[{i + 1}/{len(sets)}] Fetching prices for set: {set_name} ({lang})")
+            product_line = product_line_for(set_data.get("language", "en"))
+            logger.info(f"[{i + 1}/{len(sets)}] Fetching prices for set: {set_name} ({product_line})")
 
             try:
-                resp = await client.post(
-                    TCGPLAYER_SEARCH_API,
-                    params={"q": set_name, "isList": "false"},
-                    json=make_payload(product_line),
-                    headers={"User-Agent": config.random_user_agent()},
+                found = await search_sealed(client, set_name, product_line, config)
+            except TcgPlayerError as e:
+                logger.error(f"  Search failed for '{set_name}': {e}")
+                results["queries_failed"] += 1
+                results["failed"] += 1
+                continue
+
+            if found.truncated:
+                results["truncated_queries"] += 1
+                logger.warning(
+                    f"  '{set_name}': only {len(found.items)} of {found.total} results fetched; "
+                    "anything missing falls back to per-product pricing"
                 )
 
-                if resp.status_code != 200:
-                    logger.warning(f"  Search API returned {resp.status_code} for '{set_name}'")
-                    results["failed"] += 1
+            matched = 0
+            for item in found.items:
+                tcg_id = clean_count(item.get("productId"))
+                product = tcg_id_to_product.get(tcg_id) if tcg_id else None
+                if not product:
+                    continue  # not one of ours (other set's product, or a type we don't track)
+                seen_ids.add(tcg_id)
+                if product["id"] in snapshots:
+                    continue  # already priced from another set's results
+
+                snapshot = snapshot_from_search_item(product["id"], item, today)
+                if snapshot is None:
+                    results["skipped"] += 1  # listed on TCGPlayer but no market price or listing
                     continue
+                snapshots[product["id"]] = snapshot
+                matched += 1
 
-                data = resp.json()
-                api_results = data.get("results", [{}])
-                items = []
-                for r in api_results:
-                    items.extend(r.get("results", []))
+            results["sets_processed"] += 1
+            logger.info(f"  Matched {matched} new products with prices")
 
-                matched = 0
-                for item in items:
-                    raw_id = item.get("productId")
-                    if raw_id is None:
-                        continue
-                    tcg_id = int(raw_id)
-
-                    product = tcg_id_to_product.get(tcg_id)
-                    if not product:
-                        continue  # Not in our DB (e.g. "Other" type we skipped)
-
-                    market_price = item.get("marketPrice")
-                    lowest_price = item.get("lowestPrice")
-                    total_listings = item.get("totalListings")
-
-                    if market_price is None and lowest_price is None:
-                        results["skipped"] += 1
-                        continue
-
-                    snapshot = PriceSnapshot(
-                        product_id=product["id"],
-                        snapshot_date=today,
-                        market_price=float(market_price) if market_price else None,
-                        low_price=float(lowest_price) if lowest_price else None,
-                        total_listings=int(total_listings) if total_listings else None,
-                    )
-
-                    try:
-                        db.insert_price_snapshot(snapshot)
-                        results["success"] += 1
-                        matched += 1
-                    except Exception as e:
-                        results["failed"] += 1
-                        logger.error(f"  DB error for {product['name']}: {e}")
-
-                results["sets_processed"] += 1
-                logger.info(f"  Matched {matched} products with prices")
-
-            except Exception as e:
-                logger.error(f"  Error fetching set '{set_name}': {e}")
-                results["failed"] += 1
-
-            # Rate limiting between sets
             if i < len(sets) - 1:
                 await asyncio.sleep(config.random_delay())
 
+        # Fallback: products no search returned at all
+        missing = [p for tcg_id, p in tcg_id_to_product.items() if tcg_id not in seen_ids]
+        if missing:
+            logger.warning(f"{len(missing)} active products were not in any search result; pricing individually")
+        for product in missing[:MAX_FALLBACK_PRODUCTS]:
+            try:
+                data = await fetch_pricepoints(client, int(product["tcgplayer_product_id"]), config)
+            except TcgPlayerError as e:
+                logger.warning(f"  Fallback failed for {product['name']}: {e}")
+                results["failed"] += 1
+                continue
+            snapshot = parse_price_response(product["id"], data)
+            if snapshot is None:
+                results["skipped"] += 1
+            else:
+                snapshot.market_price = clean_price(snapshot.market_price)
+                snapshot.low_price = clean_price(snapshot.low_price)
+                snapshot.listed_median_price = clean_price(snapshot.listed_median_price)
+                if snapshot.market_price is None and snapshot.low_price is None:
+                    results["skipped"] += 1
+                else:
+                    snapshots[product["id"]] = snapshot
+                    results["fallback_priced"] += 1
+            await asyncio.sleep(config.random_delay())
+
+    # Write once, in bulk
+    written, failed_rows = db.insert_price_snapshots(list(snapshots.values()))
+    results["success"] = written
+    results["failed"] += len(failed_rows)
+
+    expected = len(tcg_id_to_product)
+    unpriced = [p["name"] for p in tcg_id_to_product.values() if p["id"] not in snapshots]
+    results["expected"] = expected
+    results["coverage"] = round(len(snapshots) / expected, 4) if expected else 1.0
+    results["unpriced_count"] = len(unpriced)
+    results["unpriced_sample"] = unpriced[:25]
+    if unpriced:
+        logger.warning(f"{len(unpriced)}/{expected} active products have no price today, e.g. {unpriced[:5]}")
     return results
 
 
-TCGPLAYER_LISTINGS_API = "https://mp-search-api.tcgplayer.com/v1/product"
-
-
-async def fetch_product_quantity(
-    tcgplayer_id: int, client: httpx.AsyncClient, config: Config
-) -> int | None:
-    """
-    Fetch the total available quantity for a product from TCGPlayer's listings API.
-
-    Calls /v1/product/{id}/listings with size=0 and aggregates the quantity buckets
-    to compute the sum of all available units across all sellers.
-    """
-    url = f"{TCGPLAYER_LISTINGS_API}/{tcgplayer_id}/listings"
-    payload = {
-        "filters": {
-            "term": {"sellerStatus": "Live", "channelId": [0]},
-            "range": {"quantity": {"gte": 1}},
-            "exclude": {"channelExclusion": 0},
-        },
-        "from": 0,
-        "size": 0,
-        "sort": {"field": "price+shipping", "order": "asc"},
-        "context": {"shippingCountry": "US", "cart": {}},
-        "aggregations": ["quantity"],
-    }
-
-    try:
-        resp = await client.post(
-            url,
-            json=payload,
-            headers={"User-Agent": config.random_user_agent()},
-        )
-        if resp.status_code != 200:
-            return None
-
-        data = resp.json()
-        results = data.get("results", [{}])
-        if not results:
-            return None
-
-        # Sum quantity * count from the aggregation buckets
-        aggs = results[0].get("aggregations", {})
-        qty_buckets = aggs.get("quantity", [])
-        total_qty = sum(
-            int(bucket["value"]) * int(bucket["count"])
-            for bucket in qty_buckets
-        )
-        return total_qty if total_qty > 0 else None
-
-    except Exception as e:
-        logger.debug(f"Quantity fetch failed for {tcgplayer_id}: {e}")
-        return None
-
-
-async def scrape_quantities_batch(db: Database, config: Config) -> dict:
+async def scrape_quantities_batch(db: Database, config: Config, snapshot_date: str | None = None) -> dict:
     """
     Scrape available_quantity for all active products using the listings API.
 
     This updates today's price_snapshots with the available_quantity field.
     Run AFTER scrape_prices_batch so the snapshot rows already exist.
+
+    A real zero (no live listings) is stored as 0 so a sold-out product shows as sold
+    out; a failed request stores nothing, so the previous quantity is never silently
+    replaced and a failure is never mistaken for "sold out".
     """
     products = db.get_products(is_active=True)
-    today = str(date.today())
+    today = snapshot_date or str(date.today())
 
-    results = {"updated": 0, "skipped": 0, "failed": 0}
+    results = {"updated": 0, "skipped": 0, "failed": 0, "no_snapshot": 0, "aborted": False}
 
     logger.info(f"Scraping quantities for {len(products)} products...")
+    consecutive_failures = 0
 
     async with httpx.AsyncClient(timeout=config.httpx_timeout) as client:
         for i, product in enumerate(products):
-            tcg_id = product.get("tcgplayer_product_id")
+            tcg_id = clean_count(product.get("tcgplayer_product_id"))
             if not tcg_id:
                 results["skipped"] += 1
                 continue
 
-            qty = await fetch_product_quantity(int(tcg_id), client, config)
+            try:
+                qty = await fetch_listing_quantity(client, tcg_id, config)
+            except TcgPlayerError as e:
+                results["failed"] += 1
+                consecutive_failures += 1
+                logger.warning(f"  Quantity fetch failed for {product['name']}: {e}")
+                if consecutive_failures >= MAX_CONSECUTIVE_QUANTITY_FAILURES:
+                    logger.error(
+                        f"{consecutive_failures} quantity requests failed in a row; "
+                        "assuming we are blocked and stopping"
+                    )
+                    results["aborted"] = True
+                    break
+                continue
+            consecutive_failures = 0
 
-            if qty is not None:
-                try:
-                    # Update today's snapshot with the quantity
-                    db.client.table("price_snapshots").update(
-                        {"available_quantity": qty}
-                    ).eq(
-                        "product_id", product["id"]
-                    ).eq(
-                        "snapshot_date", today
-                    ).execute()
-                    results["updated"] += 1
+            try:
+                rows = db.set_snapshot_quantity(product["id"], today, qty)
+            except Exception as e:
+                results["failed"] += 1
+                logger.error(f"  DB error for {product['name']}: {e}")
+                continue
 
-                    if (i + 1) % 50 == 0:
-                        logger.info(
-                            f"  [{i + 1}/{len(products)}] {results['updated']} updated so far..."
-                        )
-                except Exception as e:
-                    results["failed"] += 1
-                    logger.error(f"  DB error for {product['name']}: {e}")
+            if rows:
+                results["updated"] += 1
             else:
-                results["skipped"] += 1
+                results["no_snapshot"] += 1  # no price snapshot today to attach the quantity to
+
+            if (i + 1) % 50 == 0:
+                logger.info(f"  [{i + 1}/{len(products)}] {results['updated']} updated so far...")
 
             # Light rate limiting (these are lightweight calls)
             if i < len(products) - 1:
                 await asyncio.sleep(0.3)
 
     logger.info(
-        f"Quantities done: {results['updated']} updated, "
+        f"Quantities done: {results['updated']} updated, {results['no_snapshot']} without a snapshot, "
         f"{results['skipped']} skipped, {results['failed']} failed"
     )
     return results

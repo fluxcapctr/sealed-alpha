@@ -35,7 +35,8 @@ export default async function AlertsPage() {
     .select("*")
     .order("created_at", { ascending: false })
     .limit(100)
-    .returns<Alert[]>();
+    .returns<Alert[]>()
+    .throwOnError();
 
   const items: Alert[] = alerts ?? [];
 

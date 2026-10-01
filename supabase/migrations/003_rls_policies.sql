@@ -11,12 +11,19 @@ ALTER TABLE alerts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
 
 -- Public read access (dashboard uses anon key)
+DROP POLICY IF EXISTS "Public read: sets" ON sets;
 CREATE POLICY "Public read: sets" ON sets FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public read: products" ON products;
 CREATE POLICY "Public read: products" ON products FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public read: price_snapshots" ON price_snapshots;
 CREATE POLICY "Public read: price_snapshots" ON price_snapshots FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public read: sales_snapshots" ON sales_snapshots;
 CREATE POLICY "Public read: sales_snapshots" ON sales_snapshots FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public read: signals" ON signals;
 CREATE POLICY "Public read: signals" ON signals FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public read: alerts" ON alerts;
 CREATE POLICY "Public read: alerts" ON alerts FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public read: user_settings" ON user_settings;
 CREATE POLICY "Public read: user_settings" ON user_settings FOR SELECT USING (true);
 
 -- Writes are handled by Python tools using the service role key,
