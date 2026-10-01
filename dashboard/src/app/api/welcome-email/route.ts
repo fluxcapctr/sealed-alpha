@@ -2,6 +2,7 @@ import { Resend } from "resend";
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import type { Database } from "@/types/database";
+import { readTextBody } from "@/lib/request-body";
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -20,6 +21,10 @@ const SENDER =
   process.env.DRIP_SENDER_EMAIL ?? "onboarding@resend.dev";
 
 // --- Simple in-memory rate limiter ---
+// NOTE: this state lives in a single server instance's memory. On serverless
+// platforms (e.g. Vercel) every cold start / concurrent instance has its own
+// map, so this is only best-effort abuse damping, not a global limit. Use a
+// shared store (Redis/Upstash, Vercel KV, or a DB counter) for a real limit.
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
 const RATE_LIMIT_MAX = 5; // 5 requests per minute per IP
@@ -46,6 +51,13 @@ setInterval(() => {
 }, 300_000);
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// RFC 5321 maximum length of an email address.
+const MAX_EMAIL_LENGTH = 254;
+// The request body is just {"email": "..."}; refuse anything bigger.
+const MAX_BODY_BYTES = 1024;
+// Generic on purpose: never forward the provider's error message to the client.
+const SEND_FAILED_MESSAGE =
+  "We couldn't send your welcome email. Please try again in a few minutes.";
 
 function welcomeEmailHtml(unsubscribeUrl: string): string {
   return `
@@ -83,75 +95,119 @@ function welcomeEmailHtml(unsubscribeUrl: string): string {
   `;
 }
 
+type AdminClient = NonNullable<typeof supabaseAdmin>;
+
+function isoDate(daysFromNow: number): string {
+  return new Date(Date.now() + daysFromNow * 86400000)
+    .toISOString()
+    .split("T")[0];
+}
+
+function jsonError(error: string, status: number) {
+  return NextResponse.json({ error }, { status });
+}
+
+function withAccessCookie(resp: NextResponse): NextResponse {
+  resp.cookies.set("sa_access", "1", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 365, // 1 year
+    path: "/",
+  });
+  return resp;
+}
+
+async function findSubscriber(db: AdminClient, email: string) {
+  const { data, error } = await db
+    .from("drip_subscribers")
+    .select("id, current_step, opted_out, unsubscribe_token")
+    .eq("email", email)
+    .maybeSingle();
+
+  // A real DB error must not be mistaken for "no such subscriber".
+  if (error) throw error;
+  return data;
+}
+
+// Returns the existing subscriber row untouched, or creates a new one at
+// current_step = 0 / next_send_date = today. Step 0 means "welcome not yet
+// delivered": if the send below fails, the daily Python drip job (which sends
+// step 1 to anyone with next_send_date <= today and current_step < 6) can still
+// deliver the welcome as a fallback, and a retry from the user is not treated
+// as already subscribed.
+async function getOrCreateSubscriber(db: AdminClient, email: string) {
+  const existing = await findSubscriber(db, email);
+  if (existing) return existing;
+
+  const today = isoDate(0);
+  const { data: created, error } = await db
+    .from("drip_subscribers")
+    .insert({
+      email,
+      signup_date: today,
+      current_step: 0,
+      next_send_date: today,
+    })
+    .select("id, current_step, opted_out, unsubscribe_token")
+    .single();
+
+  if (!error) return created;
+
+  // Unique violation: a concurrent request created the row first.
+  if (error.code === "23505") {
+    const raced = await findSubscriber(db, email);
+    if (raced) return raced;
+  }
+  throw error;
+}
+
 export async function POST(request: Request) {
   try {
-    // Rate limit by IP
+    // Rate limit by IP (best-effort, per instance; see note on the limiter above)
     const ip =
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
       request.headers.get("x-real-ip") ??
       "unknown";
 
     if (isRateLimited(ip)) {
-      return NextResponse.json(
-        { error: "Too many requests" },
-        { status: 429 }
-      );
+      return jsonError("Too many requests", 429);
     }
 
-    const { email } = await request.json();
-
-    if (!email || typeof email !== "string" || !EMAIL_REGEX.test(email)) {
-      return NextResponse.json({ error: "Valid email required" }, { status: 400 });
+    const rawBody = await readTextBody(request, MAX_BODY_BYTES);
+    if (rawBody === null) {
+      return jsonError("Request too large", 413);
     }
 
-    // --- Check if already subscribed (skip duplicate sends) ---
-    if (supabaseAdmin) {
-      const { data: existing } = await supabaseAdmin
-        .from("drip_subscribers")
-        .select("id, current_step")
-        .eq("email", email)
-        .single();
-
-      if (existing && existing.current_step >= 1) {
-        const resp = NextResponse.json({ success: true, already_subscribed: true });
-        resp.cookies.set("sa_access", "1", {
-          httpOnly: true,
-          secure: true,
-          sameSite: "lax",
-          maxAge: 60 * 60 * 24 * 365,
-          path: "/",
-        });
-        return resp;
-      }
+    let body: unknown;
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return jsonError("Valid email required", 400);
     }
 
-    // --- Insert drip subscriber ---
-    let unsubscribeToken: string | null = null;
+    // Normalize BEFORE validating, deduping or storing.
+    const rawEmail = (body as { email?: unknown } | null)?.email;
+    const email =
+      typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
 
-    if (supabaseAdmin) {
-      const today = new Date().toISOString().split("T")[0];
-      const nextSendDate = new Date(Date.now() + 3 * 86400000)
-        .toISOString()
-        .split("T")[0];
+    if (!email || email.length > MAX_EMAIL_LENGTH || !EMAIL_REGEX.test(email)) {
+      return jsonError("Valid email required", 400);
+    }
 
-      const { data: sub, error: dbError } = await supabaseAdmin
-        .from("drip_subscribers")
-        .upsert(
-          {
-            email,
-            signup_date: today,
-            current_step: 1,
-            next_send_date: nextSendDate,
-          },
-          { onConflict: "email" }
-        )
-        .select("unsubscribe_token")
-        .single();
+    // --- Find or create the drip subscriber (step 0 until the welcome is sent) ---
+    const db = supabaseAdmin;
+    let subscriber: Awaited<ReturnType<typeof getOrCreateSubscriber>> | null =
+      null;
 
-      if (dbError) {
-        console.error("[Drip] DB insert error:", dbError);
-      } else {
-        unsubscribeToken = sub?.unsubscribe_token ?? null;
+    if (db) {
+      subscriber = await getOrCreateSubscriber(db, email);
+
+      // Already welcomed (or opted out): leave the row exactly as it is.
+      if (subscriber.opted_out || subscriber.current_step >= 1) {
+        return withAccessCookie(
+          NextResponse.json({ success: true, already_subscribed: true })
+        );
       }
     }
 
@@ -161,54 +217,69 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, skipped: true });
     }
 
+    const unsubscribeToken = subscriber?.unsubscribe_token ?? null;
     const unsubscribeUrl = unsubscribeToken
       ? `${SITE_URL}/api/unsubscribe?token=${unsubscribeToken}`
       : `${SITE_URL}/api/unsubscribe`;
 
-    const { data: emailResp, error } = await resend.emails.send({
-      from: `Sealed Alpha <${SENDER}>`,
-      to: email,
-      subject: "Welcome to Sealed Alpha - Your Pokemon TCG Edge",
-      html: welcomeEmailHtml(unsubscribeUrl),
-    });
+    let resendId: string | null = null;
+    try {
+      const { data: emailResp, error } = await resend.emails.send({
+        from: `Sealed Alpha <${SENDER}>`,
+        to: email,
+        subject: "Welcome to Sealed Alpha - Your Pokemon TCG Edge",
+        html: welcomeEmailHtml(unsubscribeUrl),
+        // RFC 8058 one-click unsubscribe (POST /api/unsubscribe?token=...)
+        ...(unsubscribeToken
+          ? {
+              headers: {
+                "List-Unsubscribe": `<${unsubscribeUrl}>`,
+                "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+              },
+            }
+          : {}),
+      });
 
-    if (error) {
-      console.error("[Welcome Email] Error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) {
+        // Log the provider error server-side only; the client gets a generic message.
+        console.error("[Welcome Email] Resend error:", error);
+        return jsonError(SEND_FAILED_MESSAGE, 502);
+      }
+      resendId = emailResp?.id ?? null;
+    } catch (sendErr) {
+      console.error("[Welcome Email] Send threw:", sendErr);
+      return jsonError(SEND_FAILED_MESSAGE, 502);
     }
 
-    // Log to drip_log
-    if (supabaseAdmin && unsubscribeToken) {
-      const { data: sub } = await supabaseAdmin
+    // --- Only after a successful send: record that step 1 (welcome) went out ---
+    if (db && subscriber) {
+      const { error: stepError } = await db
         .from("drip_subscribers")
-        .select("id")
-        .eq("email", email)
-        .single();
+        .update({ current_step: 1, next_send_date: isoDate(3) })
+        .eq("id", subscriber.id)
+        .eq("current_step", 0); // never move an already-advanced row
 
-      if (sub) {
-        await supabaseAdmin.from("drip_log").insert({
-          subscriber_id: sub.id,
-          step: 1,
-          template_key: "welcome",
-          resend_id: emailResp?.id ?? null,
-        });
+      if (stepError) {
+        // The email was delivered, so still succeed; the row stays at step 0 and
+        // the drip job may re-send the welcome. Surface it loudly in the logs.
+        console.error("[Welcome Email] Failed to advance drip step:", stepError);
+      }
+
+      const { error: logError } = await db.from("drip_log").insert({
+        subscriber_id: subscriber.id,
+        step: 1,
+        template_key: "welcome",
+        resend_id: resendId,
+      });
+
+      if (logError) {
+        console.error("[Welcome Email] Failed to write drip_log:", logError);
       }
     }
 
-    const resp = NextResponse.json({ success: true });
-    resp.cookies.set("sa_access", "1", {
-      httpOnly: true,
-      secure: true,
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 365, // 1 year
-      path: "/",
-    });
-    return resp;
+    return withAccessCookie(NextResponse.json({ success: true }));
   } catch (err) {
     console.error("[Welcome Email] Unexpected error:", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return jsonError("Internal server error", 500);
   }
 }

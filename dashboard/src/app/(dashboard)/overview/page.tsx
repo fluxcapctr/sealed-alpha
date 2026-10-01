@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { StatCard } from "@/components/stat-card";
 import { SignalBadge } from "@/components/signal-badge";
 import { formatPrice, formatPct, getPctColor } from "@/lib/signals";
@@ -21,16 +22,18 @@ export const revalidate = 300;
 export default async function OverviewPage() {
   const supabase = await createClient();
 
-  const [{ data: analytics }, { data: allSets }] = await Promise.all([
-    supabase
-      .from("product_analytics")
-      .select("*")
-      .order("current_price", { ascending: false })
-      .returns<ProductAnalytics[]>(),
-    supabase.from("sets").select("name"),
+  const [products, { data: allSets }] = await Promise.all([
+    fetchAll<ProductAnalytics>((from, to) =>
+      supabase
+        .from("product_analytics")
+        .select("*")
+        .order("current_price", { ascending: false })
+        .order("product_id")
+        .range(from, to)
+        .returns<ProductAnalytics[]>()
+    ),
+    supabase.from("sets").select("name").throwOnError(),
   ]);
-
-  const products = analytics ?? [];
 
   const totalProducts = products.length;
   const totalSets = (allSets ?? []).filter((s) => !HIDDEN_SUBSETS.has(s.name)).length;

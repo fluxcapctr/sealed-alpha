@@ -1,6 +1,6 @@
 -- Pull rates per rarity tier per set
 -- Data sourced from TCGPlayer articles (via TCG in Figures)
-CREATE TABLE pull_rates (
+CREATE TABLE IF NOT EXISTS pull_rates (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   set_id UUID REFERENCES sets(id),
   rarity TEXT NOT NULL,
@@ -13,4 +13,5 @@ CREATE TABLE pull_rates (
 
 -- RLS: allow anonymous reads
 ALTER TABLE pull_rates ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow anonymous reads" ON pull_rates;
 CREATE POLICY "Allow anonymous reads" ON pull_rates FOR SELECT USING (true);

@@ -1,6 +1,7 @@
 import { MetadataRoute } from "next";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
+import { getSupabasePublicEnv } from "@/lib/supabase/env";
 
 const BASE_URL = "https://sealedalpha.com";
 
@@ -36,10 +37,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let setPages: MetadataRoute.Sitemap = [];
 
   try {
-    const supabase = createClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const { url, anonKey } = getSupabasePublicEnv();
+    const supabase = createClient<Database>(url, anonKey);
 
     const { data: sets } = await supabase
       .from("sets")

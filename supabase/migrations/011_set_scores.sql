@@ -1,7 +1,7 @@
 -- Migration 011: Set Investibility Scores
 -- Run in Supabase Dashboard SQL Editor
 
-CREATE TABLE public.set_scores (
+CREATE TABLE IF NOT EXISTS public.set_scores (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     set_id UUID NOT NULL REFERENCES public.sets(id) ON DELETE CASCADE,
     overall_grade TEXT NOT NULL CHECK (overall_grade IN ('S', 'A', 'B', 'C', 'D', 'F')),
@@ -20,6 +20,7 @@ CREATE TABLE public.set_scores (
 
 -- RLS
 ALTER TABLE public.set_scores ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow anon read" ON public.set_scores;
 CREATE POLICY "Allow anon read" ON public.set_scores FOR SELECT USING (true);
 
 -- Grant access

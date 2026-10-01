@@ -6,7 +6,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ============================================
 -- SETS
 -- ============================================
-CREATE TABLE sets (
+CREATE TABLE IF NOT EXISTS sets (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name            TEXT NOT NULL,
     code            TEXT UNIQUE,
@@ -25,7 +25,7 @@ CREATE TABLE sets (
 -- ============================================
 -- PRODUCTS
 -- ============================================
-CREATE TABLE products (
+CREATE TABLE IF NOT EXISTS products (
     id                      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     set_id                  UUID REFERENCES sets(id) ON DELETE CASCADE,
     name                    TEXT NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE products (
 -- ============================================
 -- PRICE SNAPSHOTS
 -- ============================================
-CREATE TABLE price_snapshots (
+CREATE TABLE IF NOT EXISTS price_snapshots (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     product_id          UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     snapshot_date       DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -65,7 +65,7 @@ CREATE TABLE price_snapshots (
 -- ============================================
 -- SALES SNAPSHOTS
 -- ============================================
-CREATE TABLE sales_snapshots (
+CREATE TABLE IF NOT EXISTS sales_snapshots (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     product_id      UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     snapshot_date   DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -81,7 +81,7 @@ CREATE TABLE sales_snapshots (
 -- ============================================
 -- SIGNALS (computed buy/sell scores)
 -- ============================================
-CREATE TABLE signals (
+CREATE TABLE IF NOT EXISTS signals (
     id                      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     product_id              UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     signal_date             DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -102,7 +102,7 @@ CREATE TABLE signals (
 -- ============================================
 -- ALERTS
 -- ============================================
-CREATE TABLE alerts (
+CREATE TABLE IF NOT EXISTS alerts (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     product_id      UUID REFERENCES products(id) ON DELETE CASCADE,
     alert_type      TEXT NOT NULL CHECK (alert_type IN (
@@ -120,7 +120,7 @@ CREATE TABLE alerts (
 -- ============================================
 -- USER SETTINGS
 -- ============================================
-CREATE TABLE user_settings (
+CREATE TABLE IF NOT EXISTS user_settings (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email               TEXT,
     alert_threshold     NUMERIC(5,1) DEFAULT 50.0,
@@ -141,9 +141,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS update_sets_updated_at ON sets;
 CREATE TRIGGER update_sets_updated_at
     BEFORE UPDATE ON sets FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_products_updated_at ON products;
 CREATE TRIGGER update_products_updated_at
     BEFORE UPDATE ON products FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_user_settings_updated_at ON user_settings;
 CREATE TRIGGER update_user_settings_updated_at
     BEFORE UPDATE ON user_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
